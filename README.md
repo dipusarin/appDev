@@ -17,15 +17,27 @@ family sees the same shared, real-time history.
 
 ## Running the backend
 
+Requires **Node.js 22.5+** (uses Node's built-in `node:sqlite` — no native
+compiler/build tools needed, so `npm install` works out of the box on Windows
+too, no Visual Studio Build Tools required).
+
 ```bash
 cd server
 npm install
 npm start        # listens on http://localhost:4000
 ```
 
+You'll see an `ExperimentalWarning: SQLite is an experimental feature` line —
+that's expected and harmless.
+
 This creates a local `data.sqlite` file (ignored by git) the first time it runs.
 Set `PORT` or `JWT_SECRET` env vars to override the defaults — in particular,
 set a real `JWT_SECRET` before deploying anywhere beyond your own machine.
+
+> **Windows + OneDrive**: if the project folder is inside a OneDrive-synced
+> directory, `npm install` can fail with `EPERM`/cleanup errors because
+> OneDrive locks files mid-install. Pause OneDrive syncing while installing,
+> or move the project to a non-synced folder (e.g. `C:\dev\appDev`).
 
 ## Running the mobile app
 
