@@ -1,3 +1,4 @@
+import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import React, { useState } from 'react';
 import {
@@ -7,12 +8,13 @@ import {
   ScrollView,
   StyleSheet,
   Text,
-  TextInput,
   TouchableOpacity,
   View,
 } from 'react-native';
 import { ApiError } from '../api/client';
+import IconTextInput from '../components/IconTextInput';
 import { useAuth } from '../context/AuthContext';
+import { colors, font, radius, shadow, spacing } from '../theme';
 
 export default function RegisterScreen() {
   const navigation = useNavigation<any>();
@@ -57,24 +59,21 @@ export default function RegisterScreen() {
   };
 
   return (
-    <KeyboardAvoidingView
-      style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-    >
+    <KeyboardAvoidingView style={styles.container} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
         <Text style={styles.title}>Create your account</Text>
 
-        <TextInput style={styles.input} placeholder="Your name" value={name} onChangeText={setName} />
-        <TextInput
-          style={styles.input}
+        <IconTextInput icon="person-outline" placeholder="Your name" value={name} onChangeText={setName} />
+        <IconTextInput
+          icon="mail-outline"
           placeholder="Email"
           autoCapitalize="none"
           keyboardType="email-address"
           value={email}
           onChangeText={setEmail}
         />
-        <TextInput
-          style={styles.input}
+        <IconTextInput
+          icon="lock-closed-outline"
           placeholder="Password (min 6 characters)"
           secureTextEntry
           value={password}
@@ -86,26 +85,38 @@ export default function RegisterScreen() {
             style={[styles.modeButton, mode === 'create' && styles.modeButtonActive]}
             onPress={() => setMode('create')}
           >
+            <Ionicons
+              name="add-circle-outline"
+              size={16}
+              color={mode === 'create' ? colors.white : colors.feeding}
+              style={styles.modeIcon}
+            />
             <Text style={[styles.modeText, mode === 'create' && styles.modeTextActive]}>Start a family</Text>
           </TouchableOpacity>
           <TouchableOpacity
             style={[styles.modeButton, mode === 'join' && styles.modeButtonActive]}
             onPress={() => setMode('join')}
           >
+            <Ionicons
+              name="key-outline"
+              size={16}
+              color={mode === 'join' ? colors.white : colors.feeding}
+              style={styles.modeIcon}
+            />
             <Text style={[styles.modeText, mode === 'join' && styles.modeTextActive]}>Join with a code</Text>
           </TouchableOpacity>
         </View>
 
         {mode === 'create' ? (
-          <TextInput
-            style={styles.input}
+          <IconTextInput
+            icon="people-outline"
             placeholder="Family name (optional)"
             value={familyName}
             onChangeText={setFamilyName}
           />
         ) : (
-          <TextInput
-            style={styles.input}
+          <IconTextInput
+            icon="key-outline"
             placeholder="Invite code"
             autoCapitalize="characters"
             value={inviteCode}
@@ -116,7 +127,11 @@ export default function RegisterScreen() {
         {error ? <Text style={styles.error}>{error}</Text> : null}
 
         <TouchableOpacity style={styles.button} onPress={onSubmit} disabled={submitting}>
-          {submitting ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>Create account</Text>}
+          {submitting ? (
+            <ActivityIndicator color={colors.white} />
+          ) : (
+            <Text style={styles.buttonText}>Create account</Text>
+          )}
         </TouchableOpacity>
 
         <TouchableOpacity onPress={() => navigation.navigate('Login')} style={styles.linkWrap}>
@@ -128,41 +143,35 @@ export default function RegisterScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#FFF8F2' },
-  scroll: { padding: 24, paddingTop: 60, flexGrow: 1 },
-  title: { fontSize: 26, fontWeight: '700', textAlign: 'center', color: '#5B4B8A', marginBottom: 28 },
-  input: {
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    marginBottom: 12,
-    borderWidth: 1,
-    borderColor: '#E6DFF2',
-    fontSize: 16,
-  },
-  modeSwitch: { flexDirection: 'row', marginBottom: 12, gap: 8 },
+  container: { flex: 1, backgroundColor: colors.bg },
+  scroll: { padding: spacing.xl, paddingTop: 60, flexGrow: 1 },
+  title: { fontSize: font.size.xl, fontWeight: font.weight.black, textAlign: 'center', color: colors.textPrimary, marginBottom: spacing.xxl },
+  modeSwitch: { flexDirection: 'row', marginBottom: spacing.md, gap: spacing.sm },
   modeButton: {
     flex: 1,
+    flexDirection: 'row',
     paddingVertical: 10,
-    borderRadius: 10,
+    borderRadius: radius.md,
     borderWidth: 1,
-    borderColor: '#E6DFF2',
+    borderColor: colors.border,
     alignItems: 'center',
-    backgroundColor: '#fff',
+    justifyContent: 'center',
+    backgroundColor: colors.surface,
   },
-  modeButtonActive: { backgroundColor: '#7B61C7', borderColor: '#7B61C7' },
-  modeText: { color: '#5B4B8A', fontWeight: '600' },
-  modeTextActive: { color: '#fff' },
+  modeButtonActive: { backgroundColor: colors.feeding, borderColor: colors.feeding },
+  modeIcon: { marginRight: 6 },
+  modeText: { color: colors.feeding, fontWeight: font.weight.bold },
+  modeTextActive: { color: colors.white },
   button: {
-    backgroundColor: '#7B61C7',
-    borderRadius: 12,
+    backgroundColor: colors.feeding,
+    borderRadius: radius.lg,
     paddingVertical: 15,
     alignItems: 'center',
-    marginTop: 8,
+    marginTop: spacing.sm,
+    ...shadow.card,
   },
-  buttonText: { color: '#fff', fontSize: 16, fontWeight: '600' },
-  error: { color: '#D0455B', marginBottom: 8, textAlign: 'center' },
-  linkWrap: { marginTop: 20, alignItems: 'center' },
-  link: { color: '#7B61C7', fontSize: 14 },
+  buttonText: { color: colors.white, fontSize: font.size.base, fontWeight: font.weight.bold },
+  error: { color: colors.danger, marginBottom: spacing.sm, textAlign: 'center' },
+  linkWrap: { marginTop: spacing.xl, alignItems: 'center' },
+  link: { color: colors.feeding, fontSize: font.size.md, fontWeight: font.weight.medium },
 });

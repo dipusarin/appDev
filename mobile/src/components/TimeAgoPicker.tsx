@@ -1,6 +1,8 @@
+import { Ionicons } from '@expo/vector-icons';
 import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
 import React, { useState } from 'react';
 import { Platform, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { colors, font, radius, spacing } from '../theme';
 import { formatTimeOfDay } from '../utils/time';
 
 const PRESETS = [0, 15, 30, 60];
@@ -44,9 +46,8 @@ export default function TimeAgoPicker({
           </TouchableOpacity>
         ))}
         <TouchableOpacity style={styles.clockChip} onPress={() => setPickerVisible(true)}>
-          <Text style={styles.clockChipText}>
-            🕐 {formatTimeOfDay(new Date(Date.now() - minutesAgo * 60000).toISOString())}
-          </Text>
+          <Ionicons name="time-outline" size={15} color={colors.feeding} style={styles.clockIcon} />
+          <Text style={styles.clockChipText}>{formatTimeOfDay(new Date(Date.now() - minutesAgo * 60000).toISOString())}</Text>
         </TouchableOpacity>
       </View>
 
@@ -56,6 +57,7 @@ export default function TimeAgoPicker({
           style={styles.customInput}
           keyboardType="number-pad"
           placeholder="e.g. 45"
+          placeholderTextColor={colors.textMuted}
           value={isPreset ? customText : String(minutesAgo)}
           onChangeText={(text) => {
             setCustomText(text);
@@ -87,39 +89,50 @@ export default function TimeAgoPicker({
 }
 
 const styles = StyleSheet.create({
-  row: { flexDirection: 'row', gap: 8, flexWrap: 'wrap' },
+  row: { flexDirection: 'row', gap: spacing.sm, flexWrap: 'wrap' },
   chip: {
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 18,
-    backgroundColor: '#fff',
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    borderRadius: radius.pill,
+    backgroundColor: colors.surface,
     borderWidth: 1,
-    borderColor: '#E6DFF2',
+    borderColor: colors.border,
   },
-  chipActive: { backgroundColor: '#7B61C7', borderColor: '#7B61C7' },
-  chipText: { color: '#5B4B8A', fontWeight: '600' },
-  chipTextActive: { color: '#fff' },
+  chipActive: { backgroundColor: colors.feeding, borderColor: colors.feeding },
+  chipText: { color: colors.textSecondary, fontWeight: font.weight.bold },
+  chipTextActive: { color: colors.white },
   clockChip: {
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 18,
-    backgroundColor: '#FBF8FF',
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    borderRadius: radius.pill,
+    backgroundColor: colors.feedingSoft,
     borderWidth: 1,
-    borderColor: '#7B61C7',
+    borderColor: colors.feeding,
   },
-  clockChipText: { color: '#7B61C7', fontWeight: '700' },
-  customRow: { flexDirection: 'row', alignItems: 'center', marginTop: 10, gap: 8 },
-  customLabel: { color: '#8A7CA8', fontSize: 14 },
+  clockIcon: { marginRight: 4 },
+  clockChipText: { color: colors.feeding, fontWeight: font.weight.bold },
+  customRow: { flexDirection: 'row', alignItems: 'center', marginTop: spacing.sm, gap: spacing.sm },
+  customLabel: { color: colors.textSecondary, fontSize: font.size.md },
   customInput: {
     borderWidth: 1,
-    borderColor: '#E6DFF2',
-    borderRadius: 10,
-    paddingHorizontal: 12,
+    borderColor: colors.border,
+    borderRadius: radius.sm,
+    paddingHorizontal: spacing.md,
     paddingVertical: 6,
     width: 80,
-    backgroundColor: '#fff',
+    backgroundColor: colors.surface,
+    color: colors.textPrimary,
   },
-  pickerWrap: { marginTop: 10, backgroundColor: '#fff', borderRadius: 12, borderWidth: 1, borderColor: '#E6DFF2', padding: 8 },
-  doneButton: { alignSelf: 'flex-end', paddingHorizontal: 16, paddingVertical: 8 },
-  doneButtonText: { color: '#7B61C7', fontWeight: '700' },
+  pickerWrap: {
+    marginTop: spacing.sm,
+    backgroundColor: colors.surface,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+    padding: spacing.sm,
+  },
+  doneButton: { alignSelf: 'flex-end', paddingHorizontal: spacing.lg, paddingVertical: spacing.sm },
+  doneButtonText: { color: colors.feeding, fontWeight: font.weight.bold },
 });

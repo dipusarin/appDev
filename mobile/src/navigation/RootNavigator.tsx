@@ -1,8 +1,10 @@
+import { Ionicons } from '@expo/vector-icons';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import React from 'react';
-import { ActivityIndicator, Text, View } from 'react-native';
+import { ActivityIndicator, View } from 'react-native';
+import { colors } from '../theme';
 import { useAuth } from '../context/AuthContext';
 import AddDiaperScreen from '../screens/AddDiaperScreen';
 import AddFeedingScreen from '../screens/AddFeedingScreen';
@@ -26,37 +28,55 @@ function AuthNavigator() {
   );
 }
 
-function TabIcon({ symbol, focused }: { symbol: string; focused: boolean }) {
-  return <Text style={{ fontSize: 20, opacity: focused ? 1 : 0.4 }}>{symbol}</Text>;
-}
+const TAB_ICONS: Record<string, { active: keyof typeof Ionicons.glyphMap; inactive: keyof typeof Ionicons.glyphMap }> = {
+  Home: { active: 'home', inactive: 'home-outline' },
+  Timeline: { active: 'time', inactive: 'time-outline' },
+  Family: { active: 'people', inactive: 'people-outline' },
+};
 
 function MainTabs() {
   return (
-    <Tabs.Navigator screenOptions={{ headerShown: false, tabBarActiveTintColor: '#7B61C7' }}>
-      <Tabs.Screen
-        name="Home"
-        component={DashboardScreen}
-        options={{ tabBarIcon: ({ focused }) => <TabIcon symbol="🏠" focused={focused} /> }}
-      />
-      <Tabs.Screen
-        name="Timeline"
-        component={TimelineScreen}
-        options={{ tabBarIcon: ({ focused }) => <TabIcon symbol="📋" focused={focused} /> }}
-      />
-      <Tabs.Screen
-        name="Family"
-        component={FamilyScreen}
-        options={{ tabBarIcon: ({ focused }) => <TabIcon symbol="👪" focused={focused} /> }}
-      />
+    <Tabs.Navigator
+      screenOptions={({ route }) => ({
+        headerShown: false,
+        tabBarActiveTintColor: colors.feeding,
+        tabBarInactiveTintColor: colors.textMuted,
+        tabBarStyle: {
+          backgroundColor: colors.surface,
+          borderTopColor: colors.border,
+          height: 60,
+          paddingBottom: 8,
+          paddingTop: 6,
+        },
+        tabBarLabelStyle: { fontSize: 11, fontWeight: '700' },
+        tabBarIcon: ({ focused, color, size }) => (
+          <Ionicons
+            name={focused ? TAB_ICONS[route.name].active : TAB_ICONS[route.name].inactive}
+            size={size}
+            color={color}
+          />
+        ),
+      })}
+    >
+      <Tabs.Screen name="Home" component={DashboardScreen} />
+      <Tabs.Screen name="Timeline" component={TimelineScreen} />
+      <Tabs.Screen name="Family" component={FamilyScreen} />
     </Tabs.Navigator>
   );
 }
 
 function AppNavigator() {
   return (
-    <RootStack.Navigator screenOptions={{ headerShown: false }}>
-      <RootStack.Screen name="Main" component={MainTabs} />
-      <RootStack.Group screenOptions={{ presentation: 'modal', headerShown: true }}>
+    <RootStack.Navigator
+      screenOptions={{
+        headerStyle: { backgroundColor: colors.surface },
+        headerTintColor: colors.feeding,
+        headerTitleStyle: { fontWeight: '700', color: colors.textPrimary },
+        headerShadowVisible: false,
+      }}
+    >
+      <RootStack.Screen name="Main" component={MainTabs} options={{ headerShown: false }} />
+      <RootStack.Group screenOptions={{ presentation: 'modal' }}>
         <RootStack.Screen name="AddFeeding" component={AddFeedingScreen} options={{ title: 'Log feeding' }} />
         <RootStack.Screen name="AddPump" component={AddPumpScreen} options={{ title: 'Log pump session' }} />
         <RootStack.Screen name="AddDiaper" component={AddDiaperScreen} options={{ title: 'Log diaper change' }} />
@@ -70,8 +90,8 @@ export default function RootNavigator() {
 
   if (loading) {
     return (
-      <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: '#FFF8F2' }}>
-        <ActivityIndicator size="large" color="#7B61C7" />
+      <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.bg }}>
+        <ActivityIndicator size="large" color={colors.feeding} />
       </View>
     );
   }

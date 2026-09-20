@@ -1,3 +1,4 @@
+import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import React, { useCallback, useState } from 'react';
 import {
@@ -6,13 +7,16 @@ import {
   ScrollView,
   StyleSheet,
   Text,
-  TextInput,
   TouchableOpacity,
   View,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { api } from '../api/client';
+import IconTextInput from '../components/IconTextInput';
 import { useAuth } from '../context/AuthContext';
 import type { BabySummary } from '../api/types';
+import { DIAPER_ICONS, FEEDING_ICONS, PUMP_ICON } from '../icons';
+import { colors, font, getUrgencyColor, radius, shadow, spacing } from '../theme';
 import { formatClockTime, formatRelativeTime } from '../utils/time';
 
 const FEEDING_LABELS: Record<string, string> = {
@@ -22,6 +26,11 @@ const FEEDING_LABELS: Record<string, string> = {
   combo: 'Combo feed',
 };
 const DIAPER_LABELS: Record<string, string> = { wet: 'Wet', dirty: 'Dirty', dry: 'Dry' };
+
+function minutesSince(iso?: string | null): number | null {
+  if (!iso) return null;
+  return Math.max(0, Math.round((Date.now() - new Date(iso).getTime()) / 60000));
+}
 
 function AddBabyForm() {
   const { addBaby } = useAuth();
@@ -41,23 +50,71 @@ function AddBabyForm() {
 
   return (
     <View style={styles.emptyState}>
+      <View style={styles.emptyIconBadge}>
+        <Ionicons name="happy-outline" size={34} color={colors.feeding} />
+      </View>
       <Text style={styles.emptyTitle}>Add your baby to get started</Text>
-      <TextInput
-        style={styles.input}
-        placeholder="Baby's name"
-        value={name}
-        onChangeText={setName}
-      />
+      <IconTextInput icon="person-outline" placeholder="Baby's name" value={name} onChangeText={setName} />
       <TouchableOpacity style={styles.button} onPress={onSubmit} disabled={submitting}>
-        {submitting ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>Add baby</Text>}
+        {submitting ? <ActivityIndicator color={colors.white} /> : <Text style={styles.buttonText}>Add baby</Text>}
       </TouchableOpacity>
     </View>
   );
 }
 
+function StatusCard({
+  icon,
+  iconColor,
+  iconSoft,
+  label,
+  lastIso,
+  urgencyKind,
+  meta,
+  emptyText,
+  onPress,
+}: {
+  icon: React.ReactNode;
+  iconColor: string;
+  iconSoft: string;
+  label: string;
+  lastIso: string | null;
+  urgencyKind: 'feeding' | 'pump' | 'diaper';
+  meta: string;
+  emptyText: string;
+  onPress: () => void;
+}) {
+  const urgencyColor = getUrgencyColor(minutesSince(lastIso), urgencyKind);
+  return (
+    <TouchableOpacity style={styles.card} onPress={onPress} activeOpacity={0.85}>
+      <View style={styles.cardTop}>
+        <View style={[styles.iconBadge, { backgroundColor: iconSoft }]}>{icon}</View>
+        <View style={{ flex: 1 }}>
+          <Text style={styles.cardLabel}>{label}</Text>
+          {lastIso ? (
+            <>
+              <Text style={[styles.cardValue, { color: urgencyColor }]}>{formatRelativeTime(lastIso)}</Text>
+              <Text style={styles.cardMeta} numberOfLines={1}>
+                {meta}
+              </Text>
+            </>
+          ) : (
+            <Text style={styles.cardEmpty}>{emptyText}</Text>
+          )}
+        </View>
+        <View style={[styles.addButton, { backgroundColor: iconColor }]}>
+          <Ionicons name="add" size={20} color={colors.white} />
+        </View>
+      </View>
+      {lastIso ? <Text style={styles.cardTime}>Last logged at {formatClockTime(lastIso)}</Text> : null}
+    </TouchableOpacity>
+  );
+}
+
 export default function DashboardScreen() {
   const navigation = useNavigation<any>();
-  const { token, babies, selectedBabyId, setSelectedBabyId } = useAuth();
+  const insets = useSafeAreaInsets();
+  const { user, babies, selectedBabyId, setSelectedBabyId } = useAuth();
+  const { token } = useAuth();
   const [summary, setSummary] = useState<BabySummary | null>(null);
   const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
@@ -85,9 +142,12 @@ export default function DashboardScreen() {
     }, [loadSummary])
   );
 
+  const selectedBaby = babies.find((b) => b.id === selectedBabyId);
+  const firstName = user?.name?.split(' ')[0] ?? '';
+
   if (babies.length === 0) {
     return (
-      <ScrollView contentContainerStyle={styles.container}>
+      <ScrollView contentContainerStyle={[styles.container, { paddingTop: insets.top + spacing.xl }]}>
         <AddBabyForm />
       </ScrollView>
     );
@@ -95,9 +155,12 @@ export default function DashboardScreen() {
 
   return (
     <ScrollView
-      contentContainerStyle={styles.container}
+      contentContainerStyle={[styles.container, { paddingTop: insets.top + spacing.lg }]}
       refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => loadSummary(true)} />}
     >
+      <Text style={styles.greeting}>Hi {firstName} 👋</Text>
+      <Text style={styles.babyHeading}>{selectedBaby?.name ?? 'Your baby'}</Text>
+
       {babies.length > 1 && (
         <View style={styles.babyChips}>
           {babies.map((baby) => (
@@ -115,131 +178,133 @@ export default function DashboardScreen() {
       )}
 
       {loading ? (
-        <ActivityIndicator style={{ marginTop: 40 }} />
+        <ActivityIndicator style={{ marginTop: 40 }} color={colors.feeding} />
       ) : (
-        <>
-          <View style={styles.card}>
-            <Text style={styles.cardLabel}>Last feeding</Text>
-            {summary?.lastFeeding ? (
-              <>
-                <Text style={styles.cardValue}>{formatRelativeTime(summary.lastFeeding.startedAt)}</Text>
-                <Text style={styles.cardMeta}>
-                  {FEEDING_LABELS[summary.lastFeeding.type]}
-                  {summary.lastFeeding.amountMl ? ` · ${summary.lastFeeding.amountMl} ml` : ''}
-                  {summary.lastFeeding.durationMin ? ` · ${summary.lastFeeding.durationMin} min` : ''}
-                  {'  '}by {summary.lastFeeding.loggedByName}
-                </Text>
-                <Text style={styles.cardTime}>{formatClockTime(summary.lastFeeding.startedAt)}</Text>
-              </>
-            ) : (
-              <Text style={styles.cardMeta}>No feedings logged yet</Text>
-            )}
-          </View>
+        <View style={styles.cardStack}>
+          <StatusCard
+            icon={
+              <MaterialCommunityIcons
+                name={summary?.lastFeeding ? FEEDING_ICONS[summary.lastFeeding.type] : 'baby-bottle-outline'}
+                size={22}
+                color={colors.feeding}
+              />
+            }
+            iconColor={colors.feeding}
+            iconSoft={colors.feedingSoft}
+            label="Feeding"
+            urgencyKind="feeding"
+            lastIso={summary?.lastFeeding?.startedAt ?? null}
+            meta={
+              summary?.lastFeeding
+                ? [
+                    FEEDING_LABELS[summary.lastFeeding.type],
+                    summary.lastFeeding.amountMl ? `${summary.lastFeeding.amountMl} ml` : null,
+                    summary.lastFeeding.durationMin ? `${summary.lastFeeding.durationMin} min` : null,
+                    `by ${summary.lastFeeding.loggedByName}`,
+                  ]
+                    .filter(Boolean)
+                    .join(' · ')
+                : ''
+            }
+            emptyText="No feedings logged yet"
+            onPress={() => navigation.navigate('AddFeeding', { babyId: selectedBabyId })}
+          />
 
-          <View style={styles.card}>
-            <Text style={styles.cardLabel}>Last diaper change</Text>
-            {summary?.lastDiaper ? (
-              <>
-                <Text style={styles.cardValue}>{formatRelativeTime(summary.lastDiaper.loggedAt)}</Text>
-                <Text style={styles.cardMeta}>
-                  {DIAPER_LABELS[summary.lastDiaper.type]}
-                  {summary.lastDiaper.texture ? ` · ${summary.lastDiaper.texture}` : ''}
-                  {summary.lastDiaper.color ? ` · ${summary.lastDiaper.color}` : ''}
-                  {'  '}by {summary.lastDiaper.loggedByName}
-                </Text>
-                <Text style={styles.cardTime}>{formatClockTime(summary.lastDiaper.loggedAt)}</Text>
-              </>
-            ) : (
-              <Text style={styles.cardMeta}>No diaper changes logged yet</Text>
-            )}
-          </View>
+          <StatusCard
+            icon={<MaterialCommunityIcons name={PUMP_ICON} size={22} color={colors.pump} />}
+            iconColor={colors.pump}
+            iconSoft={colors.pumpSoft}
+            label="Pump session"
+            urgencyKind="pump"
+            lastIso={summary?.lastPump?.startedAt ?? null}
+            meta={
+              summary?.lastPump
+                ? [summary.lastPump.durationMin ? `${summary.lastPump.durationMin} min` : 'Logged', `by ${summary.lastPump.loggedByName}`]
+                    .filter(Boolean)
+                    .join(' · ')
+                : ''
+            }
+            emptyText="No pump sessions logged yet"
+            onPress={() => navigation.navigate('AddPump', { babyId: selectedBabyId })}
+          />
 
-          <View style={styles.card}>
-            <Text style={styles.cardLabel}>Last pump session</Text>
-            {summary?.lastPump ? (
-              <>
-                <Text style={styles.cardValue}>{formatRelativeTime(summary.lastPump.startedAt)}</Text>
-                <Text style={styles.cardMeta}>
-                  {summary.lastPump.durationMin ? `${summary.lastPump.durationMin} min` : 'Logged'}
-                  {'  '}by {summary.lastPump.loggedByName}
-                </Text>
-                <Text style={styles.cardTime}>{formatClockTime(summary.lastPump.startedAt)}</Text>
-              </>
-            ) : (
-              <Text style={styles.cardMeta}>No pump sessions logged yet</Text>
-            )}
-          </View>
-        </>
+          <StatusCard
+            icon={
+              <MaterialCommunityIcons
+                name={summary?.lastDiaper ? DIAPER_ICONS[summary.lastDiaper.type] : 'diaper-outline'}
+                size={22}
+                color={colors.diaper}
+              />
+            }
+            iconColor={colors.diaper}
+            iconSoft={colors.diaperSoft}
+            label="Diaper change"
+            urgencyKind="diaper"
+            lastIso={summary?.lastDiaper?.loggedAt ?? null}
+            meta={
+              summary?.lastDiaper
+                ? [
+                    DIAPER_LABELS[summary.lastDiaper.type],
+                    summary.lastDiaper.texture,
+                    summary.lastDiaper.color,
+                    `by ${summary.lastDiaper.loggedByName}`,
+                  ]
+                    .filter(Boolean)
+                    .join(' · ')
+                : ''
+            }
+            emptyText="No diaper changes logged yet"
+            onPress={() => navigation.navigate('AddDiaper', { babyId: selectedBabyId })}
+          />
+        </View>
       )}
-
-      <View style={styles.quickAddRow}>
-        <TouchableOpacity
-          style={[styles.quickAddButton, styles.feedingButton]}
-          onPress={() => navigation.navigate('AddFeeding', { babyId: selectedBabyId })}
-        >
-          <Text style={styles.quickAddText}>+ Feeding</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.quickAddButton, styles.pumpButton]}
-          onPress={() => navigation.navigate('AddPump', { babyId: selectedBabyId })}
-        >
-          <Text style={styles.quickAddText}>+ Pump</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.quickAddButton, styles.diaperButton]}
-          onPress={() => navigation.navigate('AddDiaper', { babyId: selectedBabyId })}
-        >
-          <Text style={styles.quickAddText}>+ Diaper</Text>
-        </TouchableOpacity>
-      </View>
     </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { padding: 20, paddingTop: 60, flexGrow: 1, backgroundColor: '#FFF8F2' },
-  babyChips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 16 },
+  container: { padding: spacing.xl, flexGrow: 1, backgroundColor: colors.bg },
+  greeting: { fontSize: font.size.md, color: colors.textSecondary, fontWeight: font.weight.medium },
+  babyHeading: { fontSize: font.size.xxl, color: colors.textPrimary, fontWeight: font.weight.black, marginTop: 2, marginBottom: spacing.lg },
+  babyChips: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm, marginBottom: spacing.lg },
   chip: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 20,
-    backgroundColor: '#fff',
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.sm,
+    borderRadius: radius.pill,
+    backgroundColor: colors.surface,
     borderWidth: 1,
-    borderColor: '#E6DFF2',
+    borderColor: colors.border,
   },
-  chipActive: { backgroundColor: '#7B61C7', borderColor: '#7B61C7' },
-  chipText: { color: '#5B4B8A', fontWeight: '600' },
-  chipTextActive: { color: '#fff' },
+  chipActive: { backgroundColor: colors.feeding, borderColor: colors.feeding },
+  chipText: { color: colors.textSecondary, fontWeight: font.weight.bold },
+  chipTextActive: { color: colors.white },
+  cardStack: { gap: spacing.md },
   card: {
-    backgroundColor: '#fff',
-    borderRadius: 16,
-    padding: 18,
-    marginBottom: 14,
-    borderWidth: 1,
-    borderColor: '#F0EAF9',
+    backgroundColor: colors.surface,
+    borderRadius: radius.xl,
+    padding: spacing.lg,
+    ...shadow.card,
   },
-  cardLabel: { fontSize: 13, color: '#8A7CA8', fontWeight: '600', textTransform: 'uppercase', letterSpacing: 0.5 },
-  cardValue: { fontSize: 24, fontWeight: '700', color: '#3E2E63', marginTop: 6 },
-  cardMeta: { fontSize: 14, color: '#5B4B8A', marginTop: 4 },
-  cardTime: { fontSize: 12, color: '#B3A6CC', marginTop: 6 },
-  quickAddRow: { flexDirection: 'row', gap: 10, marginTop: 8 },
-  quickAddButton: { flex: 1, borderRadius: 14, paddingVertical: 16, alignItems: 'center' },
-  feedingButton: { backgroundColor: '#7B61C7' },
-  pumpButton: { backgroundColor: '#3E9C7F' },
-  diaperButton: { backgroundColor: '#F0965B' },
-  quickAddText: { color: '#fff', fontSize: 14, fontWeight: '700' },
-  emptyState: { padding: 8 },
-  emptyTitle: { fontSize: 18, fontWeight: '600', color: '#3E2E63', marginBottom: 16, textAlign: 'center' },
-  input: {
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    marginBottom: 12,
-    borderWidth: 1,
-    borderColor: '#E6DFF2',
-    fontSize: 16,
+  cardTop: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
+  iconBadge: { width: 46, height: 46, borderRadius: radius.md, alignItems: 'center', justifyContent: 'center' },
+  addButton: { width: 32, height: 32, borderRadius: radius.pill, alignItems: 'center', justifyContent: 'center' },
+  cardLabel: { fontSize: font.size.sm, color: colors.textSecondary, fontWeight: font.weight.bold, textTransform: 'uppercase', letterSpacing: 0.4 },
+  cardValue: { fontSize: font.size.xl, fontWeight: font.weight.black, marginTop: 2 },
+  cardMeta: { fontSize: font.size.sm, color: colors.textSecondary, marginTop: 2 },
+  cardEmpty: { fontSize: font.size.md, color: colors.textMuted, marginTop: 4 },
+  cardTime: { fontSize: font.size.xs, color: colors.textMuted, marginTop: spacing.sm },
+  emptyState: { padding: spacing.sm, alignItems: 'stretch' },
+  emptyIconBadge: {
+    alignSelf: 'center',
+    width: 64,
+    height: 64,
+    borderRadius: radius.pill,
+    backgroundColor: colors.feedingSoft,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: spacing.lg,
   },
-  button: { backgroundColor: '#7B61C7', borderRadius: 12, paddingVertical: 15, alignItems: 'center' },
-  buttonText: { color: '#fff', fontSize: 16, fontWeight: '600' },
+  emptyTitle: { fontSize: font.size.lg, fontWeight: font.weight.bold, color: colors.textPrimary, marginBottom: spacing.lg, textAlign: 'center' },
+  button: { backgroundColor: colors.feeding, borderRadius: radius.lg, paddingVertical: 15, alignItems: 'center', ...shadow.card },
+  buttonText: { color: colors.white, fontSize: font.size.base, fontWeight: font.weight.bold },
 });

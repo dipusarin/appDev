@@ -1,16 +1,18 @@
 import React from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { colors, font, radius, spacing } from '../theme';
 
 export interface ChipOption<T extends string> {
   value: T;
   label: string;
+  icon?: (color: string) => React.ReactNode;
 }
 
 export default function ChipPicker<T extends string>({
   options,
   value,
   onChange,
-  activeColor = '#7B61C7',
+  activeColor = colors.feeding,
 }: {
   options: ChipOption<T>[];
   value: T | null;
@@ -27,6 +29,9 @@ export default function ChipPicker<T extends string>({
             style={[styles.chip, isActive && { backgroundColor: activeColor, borderColor: activeColor }]}
             onPress={() => onChange(option.value)}
           >
+            {option.icon ? (
+              <View style={styles.chipIcon}>{option.icon(isActive ? colors.white : activeColor)}</View>
+            ) : null}
             <Text style={[styles.chipText, isActive && styles.chipTextActive]}>{option.label}</Text>
           </TouchableOpacity>
         );
@@ -36,15 +41,18 @@ export default function ChipPicker<T extends string>({
 }
 
 const styles = StyleSheet.create({
-  row: { flexDirection: 'row', gap: 8, flexWrap: 'wrap' },
+  row: { flexDirection: 'row', gap: spacing.sm, flexWrap: 'wrap' },
   chip: {
-    paddingHorizontal: 14,
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: spacing.md,
     paddingVertical: 10,
-    borderRadius: 20,
-    backgroundColor: '#fff',
+    borderRadius: radius.pill,
+    backgroundColor: colors.surface,
     borderWidth: 1,
-    borderColor: '#E6DFF2',
+    borderColor: colors.border,
   },
-  chipText: { color: '#5B4B8A', fontWeight: '600' },
-  chipTextActive: { color: '#fff' },
+  chipIcon: { marginRight: 6 },
+  chipText: { color: colors.textSecondary, fontWeight: font.weight.bold },
+  chipTextActive: { color: colors.white },
 });

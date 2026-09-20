@@ -1,9 +1,13 @@
+import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import React, { useCallback, useState } from 'react';
 import { ActivityIndicator, FlatList, RefreshControl, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { api } from '../api/client';
 import { useAuth } from '../context/AuthContext';
 import type { TimelineEntry } from '../api/types';
+import { DIAPER_ICONS, FEEDING_ICONS, PUMP_ICON } from '../icons';
+import { colors, font, radius, shadow, spacing } from '../theme';
 import { formatClockTime, formatRelativeTime } from '../utils/time';
 
 const FEEDING_LABELS: Record<string, string> = {
@@ -33,7 +37,13 @@ function EntryRow({ entry, babyId }: { entry: TimelineEntry; babyId: string }) {
     isDiaper && entry.color ? entry.color : null,
   ].filter(Boolean);
 
-  const dotStyle = isFeeding ? styles.feedingDot : isPump ? styles.pumpDot : styles.diaperDot;
+  const badgeColor = isFeeding ? colors.feeding : isPump ? colors.pump : colors.diaper;
+  const badgeSoft = isFeeding ? colors.feedingSoft : isPump ? colors.pumpSoft : colors.diaperSoft;
+  const iconName = isFeeding
+    ? FEEDING_ICONS[entry.type as keyof typeof FEEDING_ICONS]
+    : isPump
+      ? PUMP_ICON
+      : DIAPER_ICONS[entry.type as keyof typeof DIAPER_ICONS];
 
   const onPress = () => {
     if (isFeeding) {
@@ -75,7 +85,9 @@ function EntryRow({ entry, babyId }: { entry: TimelineEntry; babyId: string }) {
 
   return (
     <TouchableOpacity style={styles.row} onPress={onPress} activeOpacity={0.7}>
-      <View style={[styles.dot, dotStyle]} />
+      <View style={[styles.iconBadge, { backgroundColor: badgeSoft }]}>
+        <MaterialCommunityIcons name={iconName} size={20} color={badgeColor} />
+      </View>
       <View style={styles.rowContent}>
         <View style={styles.rowHeader}>
           <Text style={styles.rowTitle}>{label}</Text>
@@ -85,13 +97,14 @@ function EntryRow({ entry, babyId }: { entry: TimelineEntry; babyId: string }) {
           {[...details, `by ${entry.loggedByName}`].join(' · ')} · {formatClockTime(entry.timestamp)}
         </Text>
         {entry.notes ? <Text style={styles.rowNotes}>{entry.notes}</Text> : null}
-        <Text style={styles.editHint}>Tap to edit</Text>
       </View>
+      <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
     </TouchableOpacity>
   );
 }
 
 export default function TimelineScreen() {
+  const insets = useSafeAreaInsets();
   const { token, selectedBabyId, babies } = useAuth();
   const [entries, setEntries] = useState<TimelineEntry[]>([]);
   const [loading, setLoading] = useState(false);
@@ -123,6 +136,7 @@ export default function TimelineScreen() {
   if (babies.length === 0) {
     return (
       <View style={styles.emptyContainer}>
+        <Ionicons name="albums-outline" size={40} color={colors.textMuted} style={{ marginBottom: spacing.md }} />
         <Text style={styles.emptyText}>Add a baby from the Home tab to start tracking.</Text>
       </View>
     );
@@ -131,7 +145,7 @@ export default function TimelineScreen() {
   if (loading) {
     return (
       <View style={styles.emptyContainer}>
-        <ActivityIndicator />
+        <ActivityIndicator color={colors.feeding} />
       </View>
     );
   }
@@ -139,13 +153,15 @@ export default function TimelineScreen() {
   return (
     <FlatList
       style={styles.container}
-      contentContainerStyle={styles.listContent}
+      contentContainerStyle={[styles.listContent, { paddingTop: insets.top + spacing.lg }]}
       data={entries}
       keyExtractor={(item) => `${item.kind}-${item.id}`}
+      ListHeaderComponent={<Text style={styles.screenTitle}>Timeline</Text>}
       renderItem={({ item }) => <EntryRow entry={item} babyId={selectedBabyId as string} />}
       refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => load(true)} />}
       ListEmptyComponent={
         <View style={styles.emptyContainer}>
+          <Ionicons name="time-outline" size={40} color={colors.textMuted} style={{ marginBottom: spacing.md }} />
           <Text style={styles.emptyText}>No entries yet. Log a feeding or diaper change to see it here.</Text>
         </View>
       }
@@ -154,20 +170,26 @@ export default function TimelineScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#FFF8F2' },
-  listContent: { padding: 20, paddingTop: 60 },
-  row: { flexDirection: 'row', marginBottom: 18 },
-  dot: { width: 10, height: 10, borderRadius: 5, marginTop: 6, marginRight: 12 },
-  feedingDot: { backgroundColor: '#7B61C7' },
-  pumpDot: { backgroundColor: '#3E9C7F' },
-  diaperDot: { backgroundColor: '#F0965B' },
-  rowContent: { flex: 1, backgroundColor: '#fff', borderRadius: 14, padding: 14, borderWidth: 1, borderColor: '#F0EAF9' },
+  container: { flex: 1, backgroundColor: colors.bg },
+  listContent: { padding: spacing.xl, flexGrow: 1 },
+  screenTitle: { fontSize: font.size.xxl, fontWeight: font.weight.black, color: colors.textPrimary, marginBottom: spacing.lg },
+  row: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.surface,
+    borderRadius: radius.lg,
+    padding: spacing.md,
+    marginBottom: spacing.md,
+    gap: spacing.md,
+    ...shadow.card,
+  },
+  iconBadge: { width: 40, height: 40, borderRadius: radius.md, alignItems: 'center', justifyContent: 'center' },
+  rowContent: { flex: 1 },
   rowHeader: { flexDirection: 'row', justifyContent: 'space-between' },
-  rowTitle: { fontSize: 16, fontWeight: '700', color: '#3E2E63' },
-  rowTime: { fontSize: 13, color: '#8A7CA8', fontWeight: '600' },
-  rowMeta: { fontSize: 13, color: '#8A7CA8', marginTop: 4 },
-  rowNotes: { fontSize: 13, color: '#5B4B8A', marginTop: 6, fontStyle: 'italic' },
-  editHint: { fontSize: 11, color: '#B3A6CC', marginTop: 8, fontWeight: '600' },
-  emptyContainer: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 40 },
-  emptyText: { textAlign: 'center', color: '#8A7CA8', fontSize: 15 },
+  rowTitle: { fontSize: font.size.base, fontWeight: font.weight.bold, color: colors.textPrimary },
+  rowTime: { fontSize: font.size.sm, color: colors.textSecondary, fontWeight: font.weight.bold },
+  rowMeta: { fontSize: font.size.sm, color: colors.textSecondary, marginTop: 2 },
+  rowNotes: { fontSize: font.size.sm, color: colors.textPrimary, marginTop: spacing.xs, fontStyle: 'italic' },
+  emptyContainer: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: spacing.xxl },
+  emptyText: { textAlign: 'center', color: colors.textSecondary, fontSize: font.size.md },
 });

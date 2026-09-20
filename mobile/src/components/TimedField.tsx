@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import SessionTimer from './SessionTimer';
 import TimeAgoPicker from './TimeAgoPicker';
+import { colors, font, radius, spacing } from '../theme';
 import { minutesAgoToIso } from '../utils/time';
 
 export interface TimedValue {
@@ -56,6 +57,7 @@ export default function TimedField({
             style={styles.input}
             keyboardType="number-pad"
             placeholder="Total minutes"
+            placeholderTextColor={colors.textMuted}
             value={manualDuration}
             onChangeText={(t) => {
               setManualDuration(t);
@@ -72,17 +74,18 @@ export default function TimedField({
 }
 
 const styles = StyleSheet.create({
-  label: { fontSize: 13, fontWeight: '600', color: '#8A7CA8', marginBottom: 8, textTransform: 'uppercase' },
+  label: { fontSize: font.size.sm, fontWeight: font.weight.bold, color: colors.textSecondary, marginBottom: spacing.sm, textTransform: 'uppercase' },
   input: {
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    paddingHorizontal: 16,
+    backgroundColor: colors.surface,
+    borderRadius: radius.lg,
+    paddingHorizontal: spacing.lg,
     paddingVertical: 14,
     borderWidth: 1,
-    borderColor: '#E6DFF2',
-    fontSize: 16,
-    marginTop: 10,
+    borderColor: colors.border,
+    fontSize: font.size.base,
+    color: colors.textPrimary,
+    marginTop: spacing.sm,
   },
-  switchLinkWrap: { marginTop: 10, alignItems: 'center' },
-  switchLink: { color: '#7B61C7', fontSize: 13, fontWeight: '600' },
+  switchLinkWrap: { marginTop: spacing.sm, alignItems: 'center' },
+  switchLink: { color: colors.feeding, fontSize: font.size.sm, fontWeight: font.weight.bold },
 });

@@ -1,5 +1,7 @@
+import { Ionicons } from '@expo/vector-icons';
 import React, { useEffect, useRef, useState } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { colors, font, radius, spacing } from '../theme';
 
 export interface SessionResult {
   startedAt: string;
@@ -46,19 +48,21 @@ export default function SessionTimer({ onFinish }: { onFinish: (result: SessionR
   const ss = String(elapsedSec % 60).padStart(2, '0');
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, running && styles.containerRunning]}>
       <Text style={styles.clock}>
         {mm}:{ss}
       </Text>
       <View style={styles.buttonRow}>
         {!running && elapsedSec === 0 && (
           <TouchableOpacity style={styles.startButton} onPress={start}>
-            <Text style={styles.buttonText}>▶ Start timer</Text>
+            <Ionicons name="play" size={16} color={colors.white} style={styles.buttonIcon} />
+            <Text style={styles.buttonText}>Start timer</Text>
           </TouchableOpacity>
         )}
         {running && (
           <TouchableOpacity style={styles.stopButton} onPress={stop}>
-            <Text style={styles.buttonText}>⏹ Stop</Text>
+            <Ionicons name="stop" size={16} color={colors.white} style={styles.buttonIcon} />
+            <Text style={styles.buttonText}>Stop</Text>
           </TouchableOpacity>
         )}
         {!running && elapsedSec > 0 && (
@@ -72,12 +76,41 @@ export default function SessionTimer({ onFinish }: { onFinish: (result: SessionR
 }
 
 const styles = StyleSheet.create({
-  container: { alignItems: 'center', backgroundColor: '#FBF8FF', borderRadius: 14, padding: 16, borderWidth: 1, borderColor: '#E6DFF2' },
-  clock: { fontSize: 36, fontWeight: '800', color: '#3E2E63', fontVariant: ['tabular-nums'], marginBottom: 12 },
-  buttonRow: { flexDirection: 'row', gap: 10 },
-  startButton: { backgroundColor: '#7B61C7', borderRadius: 10, paddingVertical: 10, paddingHorizontal: 20 },
-  stopButton: { backgroundColor: '#D0455B', borderRadius: 10, paddingVertical: 10, paddingHorizontal: 20 },
-  buttonText: { color: '#fff', fontWeight: '700' },
-  resetButton: { paddingVertical: 10, paddingHorizontal: 12 },
-  resetText: { color: '#8A7CA8', fontWeight: '600' },
+  container: {
+    alignItems: 'center',
+    backgroundColor: colors.surfaceAlt,
+    borderRadius: radius.lg,
+    padding: spacing.lg,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  containerRunning: { borderColor: colors.feeding },
+  clock: {
+    fontSize: 36,
+    fontWeight: font.weight.black,
+    color: colors.textPrimary,
+    fontVariant: ['tabular-nums'],
+    marginBottom: spacing.md,
+  },
+  buttonRow: { flexDirection: 'row', gap: spacing.sm },
+  startButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.feeding,
+    borderRadius: radius.md,
+    paddingVertical: 10,
+    paddingHorizontal: spacing.xl,
+  },
+  stopButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.danger,
+    borderRadius: radius.md,
+    paddingVertical: 10,
+    paddingHorizontal: spacing.xl,
+  },
+  buttonIcon: { marginRight: 6 },
+  buttonText: { color: colors.white, fontWeight: font.weight.bold },
+  resetButton: { paddingVertical: 10, paddingHorizontal: spacing.md },
+  resetText: { color: colors.textSecondary, fontWeight: font.weight.medium },
 });

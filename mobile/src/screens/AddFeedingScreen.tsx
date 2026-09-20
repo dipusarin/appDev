@@ -1,4 +1,5 @@
 import { useNavigation, useRoute } from '@react-navigation/native';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 import React, { useState } from 'react';
 import {
   ActivityIndicator,
@@ -16,13 +17,15 @@ import TimeAgoPicker from '../components/TimeAgoPicker';
 import TimedField, { TimedValue } from '../components/TimedField';
 import { useAuth } from '../context/AuthContext';
 import type { Feeding, FeedingType } from '../api/types';
+import { FEEDING_ICONS } from '../icons';
+import { colors, font, radius, shadow, spacing } from '../theme';
 import { minutesAgoToIso } from '../utils/time';
 
-const TYPES: { value: FeedingType; label: string }[] = [
-  { value: 'breastfeed', label: 'Breastfeed' },
-  { value: 'bottle', label: 'Bottle feed' },
-  { value: 'solids', label: 'Solids' },
-  { value: 'combo', label: 'Combo feed' },
+const TYPES: { value: FeedingType; label: string; icon: (color: string) => React.ReactNode }[] = [
+  { value: 'breastfeed', label: 'Breastfeed', icon: (c) => <MaterialCommunityIcons name={FEEDING_ICONS.breastfeed} size={16} color={c} /> },
+  { value: 'bottle', label: 'Bottle feed', icon: (c) => <MaterialCommunityIcons name={FEEDING_ICONS.bottle} size={16} color={c} /> },
+  { value: 'solids', label: 'Solids', icon: (c) => <MaterialCommunityIcons name={FEEDING_ICONS.solids} size={16} color={c} /> },
+  { value: 'combo', label: 'Combo feed', icon: (c) => <MaterialCommunityIcons name={FEEDING_ICONS.combo} size={16} color={c} /> },
 ];
 
 const USES_TIMER: FeedingType[] = ['breastfeed', 'combo'];
@@ -93,18 +96,17 @@ export default function AddFeedingScreen() {
   return (
     <KeyboardAvoidingView style={styles.container} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
-        <Text style={styles.title}>{isEditing ? 'Edit feeding' : 'Log a feeding'}</Text>
-
-        <Text style={styles.label}>Type</Text>
+        <Text style={styles.sectionLabel}>Type</Text>
         <ChipPicker options={TYPES} value={type} onChange={setType} />
 
         {showsAmount && (
           <>
-            <Text style={styles.label}>Amount (ml)</Text>
+            <Text style={styles.sectionLabel}>Amount (ml)</Text>
             <TextInput
               style={styles.input}
               keyboardType="number-pad"
               placeholder="e.g. 120"
+              placeholderTextColor={colors.textMuted}
               value={amountMl}
               onChangeText={setAmountMl}
             />
@@ -119,16 +121,17 @@ export default function AddFeedingScreen() {
           />
         ) : (
           <>
-            <Text style={styles.label}>When</Text>
+            <Text style={styles.sectionLabel}>When</Text>
             <TimeAgoPicker minutesAgo={minutesAgo} onChange={setMinutesAgo} />
 
             {type === 'bottle' && (
               <>
-                <Text style={styles.label}>Duration (minutes, optional)</Text>
+                <Text style={styles.sectionLabel}>Duration (minutes, optional)</Text>
                 <TextInput
                   style={styles.input}
                   keyboardType="number-pad"
                   placeholder="e.g. 15"
+                  placeholderTextColor={colors.textMuted}
                   value={manualDurationMin}
                   onChangeText={setManualDurationMin}
                 />
@@ -137,10 +140,11 @@ export default function AddFeedingScreen() {
           </>
         )}
 
-        <Text style={styles.label}>Notes (optional)</Text>
+        <Text style={styles.sectionLabel}>Notes (optional)</Text>
         <TextInput
           style={[styles.input, styles.notesInput]}
           placeholder={type === 'solids' ? 'What did they eat?' : 'Anything worth remembering?'}
+          placeholderTextColor={colors.textMuted}
           value={notes}
           onChangeText={setNotes}
           multiline
@@ -150,7 +154,7 @@ export default function AddFeedingScreen() {
 
         <TouchableOpacity style={styles.button} onPress={onSubmit} disabled={submitting}>
           {submitting ? (
-            <ActivityIndicator color="#fff" />
+            <ActivityIndicator color={colors.white} />
           ) : (
             <Text style={styles.buttonText}>{isEditing ? 'Save changes' : 'Save feeding'}</Text>
           )}
@@ -161,21 +165,35 @@ export default function AddFeedingScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#FFF8F2' },
-  scroll: { padding: 24 },
-  title: { fontSize: 22, fontWeight: '700', color: '#3E2E63', marginBottom: 20 },
-  label: { fontSize: 13, fontWeight: '600', color: '#8A7CA8', marginBottom: 8, marginTop: 16, textTransform: 'uppercase' },
+  container: { flex: 1, backgroundColor: colors.bg },
+  scroll: { padding: spacing.xl },
+  sectionLabel: {
+    fontSize: font.size.sm,
+    fontWeight: font.weight.bold,
+    color: colors.textSecondary,
+    marginBottom: spacing.sm,
+    marginTop: spacing.lg,
+    textTransform: 'uppercase',
+  },
   input: {
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    paddingHorizontal: 16,
+    backgroundColor: colors.surface,
+    borderRadius: radius.lg,
+    paddingHorizontal: spacing.lg,
     paddingVertical: 14,
     borderWidth: 1,
-    borderColor: '#E6DFF2',
-    fontSize: 16,
+    borderColor: colors.border,
+    fontSize: font.size.base,
+    color: colors.textPrimary,
   },
   notesInput: { minHeight: 80, textAlignVertical: 'top' },
-  error: { color: '#D0455B', marginTop: 16, textAlign: 'center' },
-  button: { backgroundColor: '#7B61C7', borderRadius: 12, paddingVertical: 16, alignItems: 'center', marginTop: 28 },
-  buttonText: { color: '#fff', fontSize: 16, fontWeight: '700' },
+  error: { color: colors.danger, marginTop: spacing.lg, textAlign: 'center' },
+  button: {
+    backgroundColor: colors.feeding,
+    borderRadius: radius.lg,
+    paddingVertical: 16,
+    alignItems: 'center',
+    marginTop: spacing.xxl,
+    ...shadow.card,
+  },
+  buttonText: { color: colors.white, fontSize: font.size.base, fontWeight: font.weight.bold },
 });

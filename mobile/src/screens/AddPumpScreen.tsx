@@ -14,6 +14,7 @@ import { api, ApiError } from '../api/client';
 import TimedField, { TimedValue } from '../components/TimedField';
 import { useAuth } from '../context/AuthContext';
 import type { Pump } from '../api/types';
+import { colors, font, radius, shadow, spacing } from '../theme';
 
 export default function AddPumpScreen() {
   const navigation = useNavigation<any>();
@@ -59,14 +60,13 @@ export default function AddPumpScreen() {
   return (
     <KeyboardAvoidingView style={styles.container} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
-        <Text style={styles.title}>{isEditing ? 'Edit pump session' : 'Log a pumping session'}</Text>
-
         <TimedField label="Start time & total time" onChange={setTimed} initialValue={entry ? timed : undefined} />
 
-        <Text style={styles.label}>Notes (optional)</Text>
+        <Text style={styles.sectionLabel}>Notes (optional)</Text>
         <TextInput
           style={[styles.input, styles.notesInput]}
           placeholder="e.g. amount pumped, which side"
+          placeholderTextColor={colors.textMuted}
           value={notes}
           onChangeText={setNotes}
           multiline
@@ -76,7 +76,7 @@ export default function AddPumpScreen() {
 
         <TouchableOpacity style={styles.button} onPress={onSubmit} disabled={submitting}>
           {submitting ? (
-            <ActivityIndicator color="#fff" />
+            <ActivityIndicator color={colors.white} />
           ) : (
             <Text style={styles.buttonText}>{isEditing ? 'Save changes' : 'Save pump session'}</Text>
           )}
@@ -87,21 +87,35 @@ export default function AddPumpScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#FFF8F2' },
-  scroll: { padding: 24 },
-  title: { fontSize: 22, fontWeight: '700', color: '#3E2E63', marginBottom: 20 },
-  label: { fontSize: 13, fontWeight: '600', color: '#8A7CA8', marginBottom: 8, marginTop: 16, textTransform: 'uppercase' },
+  container: { flex: 1, backgroundColor: colors.bg },
+  scroll: { padding: spacing.xl },
+  sectionLabel: {
+    fontSize: font.size.sm,
+    fontWeight: font.weight.bold,
+    color: colors.textSecondary,
+    marginBottom: spacing.sm,
+    marginTop: spacing.lg,
+    textTransform: 'uppercase',
+  },
   input: {
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    paddingHorizontal: 16,
+    backgroundColor: colors.surface,
+    borderRadius: radius.lg,
+    paddingHorizontal: spacing.lg,
     paddingVertical: 14,
     borderWidth: 1,
-    borderColor: '#E6DFF2',
-    fontSize: 16,
+    borderColor: colors.border,
+    fontSize: font.size.base,
+    color: colors.textPrimary,
   },
   notesInput: { minHeight: 80, textAlignVertical: 'top' },
-  error: { color: '#D0455B', marginTop: 16, textAlign: 'center' },
-  button: { backgroundColor: '#3E9C7F', borderRadius: 12, paddingVertical: 16, alignItems: 'center', marginTop: 28 },
-  buttonText: { color: '#fff', fontSize: 16, fontWeight: '700' },
+  error: { color: colors.danger, marginTop: spacing.lg, textAlign: 'center' },
+  button: {
+    backgroundColor: colors.pump,
+    borderRadius: radius.lg,
+    paddingVertical: 16,
+    alignItems: 'center',
+    marginTop: spacing.xxl,
+    ...shadow.card,
+  },
+  buttonText: { color: colors.white, fontSize: font.size.base, fontWeight: font.weight.bold },
 });
