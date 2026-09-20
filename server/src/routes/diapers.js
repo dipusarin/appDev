@@ -67,4 +67,40 @@ router.get('/', (req, res) => {
   res.json(rows.map(serialize));
 });
 
+router.patch('/:id', (req, res) => {
+  const existing = db.prepare('SELECT * FROM diapers WHERE id = ? AND baby_id = ?').get(req.params.id, req.baby.id);
+  if (!existing) {
+    return res.status(404).json({ error: 'Diaper change not found' });
+  }
+  const { type, texture, color, loggedAt, notes } = req.body || {};
+  if (type !== undefined && !VALID_TYPES.includes(type)) {
+    return res.status(400).json({ error: `type must be one of ${VALID_TYPES.join(', ')}` });
+  }
+  if (texture !== undefined && texture !== null && !VALID_TEXTURES.includes(texture)) {
+    return res.status(400).json({ error: `texture must be one of ${VALID_TEXTURES.join(', ')}` });
+  }
+  if (color !== undefined && color !== null && !VALID_COLORS.includes(color)) {
+    return res.status(400).json({ error: `color must be one of ${VALID_COLORS.join(', ')}` });
+  }
+  db.prepare(
+    `UPDATE diapers SET
+       type = ?, texture = ?, color = ?, logged_at = ?, notes = ?
+     WHERE id = ?`
+  ).run(
+    type ?? existing.type,
+    texture !== undefined ? texture : existing.texture,
+    color !== undefined ? color : existing.color,
+    loggedAt ?? existing.logged_at,
+    notes !== undefined ? notes : existing.notes,
+    existing.id
+  );
+  const row = db
+    .prepare(
+      `SELECT d.*, u.name AS loggedByName FROM diapers d
+       JOIN users u ON u.id = d.user_id WHERE d.id = ?`
+    )
+    .get(existing.id);
+  res.json(serialize(row));
+});
+
 module.exports = router;

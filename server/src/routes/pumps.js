@@ -50,4 +50,27 @@ router.get('/', (req, res) => {
   res.json(rows.map(serialize));
 });
 
+router.patch('/:id', (req, res) => {
+  const existing = db.prepare('SELECT * FROM pumps WHERE id = ? AND baby_id = ?').get(req.params.id, req.baby.id);
+  if (!existing) {
+    return res.status(404).json({ error: 'Pump session not found' });
+  }
+  const { startedAt, durationMin, notes } = req.body || {};
+  db.prepare(
+    `UPDATE pumps SET started_at = ?, duration_min = ?, notes = ? WHERE id = ?`
+  ).run(
+    startedAt ?? existing.started_at,
+    durationMin !== undefined ? durationMin : existing.duration_min,
+    notes !== undefined ? notes : existing.notes,
+    existing.id
+  );
+  const row = db
+    .prepare(
+      `SELECT p.*, u.name AS loggedByName FROM pumps p
+       JOIN users u ON u.id = p.user_id WHERE p.id = ?`
+    )
+    .get(existing.id);
+  res.json(serialize(row));
+});
+
 module.exports = router;

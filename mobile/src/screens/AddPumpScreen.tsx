@@ -13,15 +13,23 @@ import {
 import { api, ApiError } from '../api/client';
 import TimedField, { TimedValue } from '../components/TimedField';
 import { useAuth } from '../context/AuthContext';
+import type { Pump } from '../api/types';
 
 export default function AddPumpScreen() {
   const navigation = useNavigation<any>();
   const route = useRoute<any>();
-  const { babyId } = route.params as { babyId: string };
+  const { babyId, entry } = route.params as {
+    babyId: string;
+    entry?: Pick<Pump, 'id' | 'startedAt' | 'durationMin' | 'notes'>;
+  };
+  const isEditing = !!entry;
   const { token } = useAuth();
 
-  const [timed, setTimed] = useState<TimedValue>({ startedAt: new Date().toISOString(), durationMin: null });
-  const [notes, setNotes] = useState('');
+  const [timed, setTimed] = useState<TimedValue>({
+    startedAt: entry?.startedAt ?? new Date().toISOString(),
+    durationMin: entry?.durationMin ?? null,
+  });
+  const [notes, setNotes] = useState(entry?.notes ?? '');
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
@@ -30,11 +38,16 @@ export default function AddPumpScreen() {
     setError(null);
     setSubmitting(true);
     try {
-      await api.logPump(token, babyId, {
+      const body = {
         startedAt: timed.startedAt,
         durationMin: timed.durationMin ?? undefined,
         notes: notes.trim() || undefined,
-      });
+      };
+      if (isEditing) {
+        await api.updatePump(token, babyId, entry.id, body);
+      } else {
+        await api.logPump(token, babyId, body);
+      }
       navigation.goBack();
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Could not save. Try again.');
@@ -46,9 +59,9 @@ export default function AddPumpScreen() {
   return (
     <KeyboardAvoidingView style={styles.container} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
-        <Text style={styles.title}>Log a pumping session</Text>
+        <Text style={styles.title}>{isEditing ? 'Edit pump session' : 'Log a pumping session'}</Text>
 
-        <TimedField label="Start time & total time" onChange={setTimed} />
+        <TimedField label="Start time & total time" onChange={setTimed} initialValue={entry ? timed : undefined} />
 
         <Text style={styles.label}>Notes (optional)</Text>
         <TextInput
@@ -62,7 +75,11 @@ export default function AddPumpScreen() {
         {error ? <Text style={styles.error}>{error}</Text> : null}
 
         <TouchableOpacity style={styles.button} onPress={onSubmit} disabled={submitting}>
-          {submitting ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>Save pump session</Text>}
+          {submitting ? (
+            <ActivityIndicator color="#fff" />
+          ) : (
+            <Text style={styles.buttonText}>{isEditing ? 'Save changes' : 'Save pump session'}</Text>
+          )}
         </TouchableOpacity>
       </ScrollView>
     </KeyboardAvoidingView>

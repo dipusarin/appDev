@@ -1,6 +1,6 @@
-import { useFocusEffect } from '@react-navigation/native';
+import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import React, { useCallback, useState } from 'react';
-import { ActivityIndicator, FlatList, RefreshControl, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, FlatList, RefreshControl, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { api } from '../api/client';
 import { useAuth } from '../context/AuthContext';
 import type { TimelineEntry } from '../api/types';
@@ -14,7 +14,8 @@ const FEEDING_LABELS: Record<string, string> = {
 };
 const DIAPER_LABELS: Record<string, string> = { wet: 'Wet diaper', dirty: 'Dirty diaper', dry: 'Dry diaper' };
 
-function EntryRow({ entry }: { entry: TimelineEntry }) {
+function EntryRow({ entry, babyId }: { entry: TimelineEntry; babyId: string }) {
+  const navigation = useNavigation<any>();
   const isFeeding = entry.kind === 'feeding';
   const isDiaper = entry.kind === 'diaper';
   const isPump = entry.kind === 'pump';
@@ -34,8 +35,46 @@ function EntryRow({ entry }: { entry: TimelineEntry }) {
 
   const dotStyle = isFeeding ? styles.feedingDot : isPump ? styles.pumpDot : styles.diaperDot;
 
+  const onPress = () => {
+    if (isFeeding) {
+      navigation.navigate('AddFeeding', {
+        babyId,
+        entry: {
+          id: entry.id,
+          type: entry.type,
+          amountMl: entry.amountMl ?? null,
+          durationMin: entry.durationMin ?? null,
+          startedAt: entry.timestamp,
+          notes: entry.notes,
+        },
+      });
+    } else if (isDiaper) {
+      navigation.navigate('AddDiaper', {
+        babyId,
+        entry: {
+          id: entry.id,
+          type: entry.type,
+          texture: entry.texture ?? null,
+          color: entry.color ?? null,
+          loggedAt: entry.timestamp,
+          notes: entry.notes,
+        },
+      });
+    } else {
+      navigation.navigate('AddPump', {
+        babyId,
+        entry: {
+          id: entry.id,
+          startedAt: entry.timestamp,
+          durationMin: entry.durationMin ?? null,
+          notes: entry.notes,
+        },
+      });
+    }
+  };
+
   return (
-    <View style={styles.row}>
+    <TouchableOpacity style={styles.row} onPress={onPress} activeOpacity={0.7}>
       <View style={[styles.dot, dotStyle]} />
       <View style={styles.rowContent}>
         <View style={styles.rowHeader}>
@@ -46,8 +85,9 @@ function EntryRow({ entry }: { entry: TimelineEntry }) {
           {[...details, `by ${entry.loggedByName}`].join(' · ')} · {formatClockTime(entry.timestamp)}
         </Text>
         {entry.notes ? <Text style={styles.rowNotes}>{entry.notes}</Text> : null}
+        <Text style={styles.editHint}>Tap to edit</Text>
       </View>
-    </View>
+    </TouchableOpacity>
   );
 }
 
@@ -102,7 +142,7 @@ export default function TimelineScreen() {
       contentContainerStyle={styles.listContent}
       data={entries}
       keyExtractor={(item) => `${item.kind}-${item.id}`}
-      renderItem={({ item }) => <EntryRow entry={item} />}
+      renderItem={({ item }) => <EntryRow entry={item} babyId={selectedBabyId as string} />}
       refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => load(true)} />}
       ListEmptyComponent={
         <View style={styles.emptyContainer}>
@@ -127,6 +167,7 @@ const styles = StyleSheet.create({
   rowTime: { fontSize: 13, color: '#8A7CA8', fontWeight: '600' },
   rowMeta: { fontSize: 13, color: '#8A7CA8', marginTop: 4 },
   rowNotes: { fontSize: 13, color: '#5B4B8A', marginTop: 6, fontStyle: 'italic' },
+  editHint: { fontSize: 11, color: '#B3A6CC', marginTop: 8, fontWeight: '600' },
   emptyContainer: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 40 },
   emptyText: { textAlign: 'center', color: '#8A7CA8', fontSize: 15 },
 });

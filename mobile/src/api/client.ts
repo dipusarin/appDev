@@ -107,4 +107,31 @@ export const api = {
     babyId: string,
     body: { startedAt?: string; durationMin?: number; notes?: string }
   ) => request<Pump>(`/babies/${babyId}/pumps`, { method: 'POST', body, token }),
+
+  updateFeeding: (
+    token: string,
+    babyId: string,
+    id: string,
+    body: Partial<{ type: FeedingType; amountMl: number | null; durationMin: number | null; startedAt: string; notes: string | null }>
+  ) => request<Feeding>(`/babies/${babyId}/feedings/${id}`, { method: 'PATCH', body, token }),
+
+  updateDiaper: (
+    token: string,
+    babyId: string,
+    id: string,
+    body: Partial<{
+      type: DiaperType;
+      texture: DiaperTexture | null;
+      color: DiaperColor | null;
+      loggedAt: string;
+      notes: string | null;
+    }>
+  ) => request<Diaper>(`/babies/${babyId}/diapers/${id}`, { method: 'PATCH', body, token }),
+
+  updatePump: (
+    token: string,
+    babyId: string,
+    id: string,
+    body: Partial<{ startedAt: string; durationMin: number | null; notes: string | null }>
+  ) => request<Pump>(`/babies/${babyId}/pumps/${id}`, { method: 'PATCH', body, token }),
 };

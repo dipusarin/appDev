@@ -12,13 +12,19 @@ export interface TimedValue {
 export default function TimedField({
   label,
   onChange,
+  initialValue,
 }: {
   label: string;
   onChange: (value: TimedValue) => void;
+  initialValue?: TimedValue;
 }) {
-  const [mode, setMode] = useState<'timer' | 'manual'>('timer');
-  const [minutesAgo, setMinutesAgo] = useState(0);
-  const [manualDuration, setManualDuration] = useState('');
+  const [mode, setMode] = useState<'timer' | 'manual'>(initialValue ? 'manual' : 'timer');
+  const [minutesAgo, setMinutesAgo] = useState(() =>
+    initialValue ? Math.max(0, Math.round((Date.now() - new Date(initialValue.startedAt).getTime()) / 60000)) : 0
+  );
+  const [manualDuration, setManualDuration] = useState(() =>
+    initialValue?.durationMin != null ? String(initialValue.durationMin) : ''
+  );
 
   const emitManual = (newMinutesAgo: number, newDuration: string) => {
     onChange({

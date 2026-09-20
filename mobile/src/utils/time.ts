@@ -18,6 +18,10 @@ export function formatClockTime(iso: string): string {
   });
 }
 
+export function formatTimeOfDay(iso: string): string {
+  return new Date(iso).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
+}
+
 export function minutesAgoToIso(minutesAgo: number): string {
   return new Date(Date.now() - minutesAgo * 60000).toISOString();
 }

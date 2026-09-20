@@ -14,7 +14,7 @@ import { api, ApiError } from '../api/client';
 import ChipPicker from '../components/ChipPicker';
 import TimeAgoPicker from '../components/TimeAgoPicker';
 import { useAuth } from '../context/AuthContext';
-import type { DiaperColor, DiaperTexture, DiaperType } from '../api/types';
+import type { Diaper, DiaperColor, DiaperTexture, DiaperType } from '../api/types';
 import { minutesAgoToIso } from '../utils/time';
 
 const TYPES: { value: DiaperType; label: string }[] = [
@@ -43,14 +43,20 @@ const COLORS: { value: DiaperColor; label: string }[] = [
 export default function AddDiaperScreen() {
   const navigation = useNavigation<any>();
   const route = useRoute<any>();
-  const { babyId } = route.params as { babyId: string };
+  const { babyId, entry } = route.params as {
+    babyId: string;
+    entry?: Pick<Diaper, 'id' | 'type' | 'texture' | 'color' | 'loggedAt' | 'notes'>;
+  };
+  const isEditing = !!entry;
   const { token } = useAuth();
 
-  const [type, setType] = useState<DiaperType>('wet');
-  const [texture, setTexture] = useState<DiaperTexture | null>(null);
-  const [color, setColor] = useState<DiaperColor | null>(null);
-  const [minutesAgo, setMinutesAgo] = useState(0);
-  const [notes, setNotes] = useState('');
+  const [type, setType] = useState<DiaperType>(entry?.type ?? 'wet');
+  const [texture, setTexture] = useState<DiaperTexture | null>(entry?.texture ?? null);
+  const [color, setColor] = useState<DiaperColor | null>(entry?.color ?? null);
+  const [minutesAgo, setMinutesAgo] = useState(
+    entry ? Math.max(0, Math.round((Date.now() - new Date(entry.loggedAt).getTime()) / 60000)) : 0
+  );
+  const [notes, setNotes] = useState(entry?.notes ?? '');
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
@@ -59,13 +65,18 @@ export default function AddDiaperScreen() {
     setError(null);
     setSubmitting(true);
     try {
-      await api.logDiaper(token, babyId, {
+      const body = {
         type,
         texture: type === 'dirty' && texture ? texture : undefined,
         color: type === 'dirty' && color ? color : undefined,
         loggedAt: minutesAgoToIso(minutesAgo),
         notes: notes.trim() || undefined,
-      });
+      };
+      if (isEditing) {
+        await api.updateDiaper(token, babyId, entry.id, body);
+      } else {
+        await api.logDiaper(token, babyId, body);
+      }
       navigation.goBack();
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Could not save. Try again.');
@@ -77,7 +88,7 @@ export default function AddDiaperScreen() {
   return (
     <KeyboardAvoidingView style={styles.container} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
-        <Text style={styles.title}>Log a diaper change</Text>
+        <Text style={styles.title}>{isEditing ? 'Edit diaper change' : 'Log a diaper change'}</Text>
 
         <Text style={styles.label}>Type</Text>
         <ChipPicker options={TYPES} value={type} onChange={setType} activeColor="#F0965B" />
@@ -107,7 +118,11 @@ export default function AddDiaperScreen() {
         {error ? <Text style={styles.error}>{error}</Text> : null}
 
         <TouchableOpacity style={styles.button} onPress={onSubmit} disabled={submitting}>
-          {submitting ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>Save diaper change</Text>}
+          {submitting ? (
+            <ActivityIndicator color="#fff" />
+          ) : (
+            <Text style={styles.buttonText}>{isEditing ? 'Save changes' : 'Save diaper change'}</Text>
+          )}
         </TouchableOpacity>
       </ScrollView>
     </KeyboardAvoidingView>

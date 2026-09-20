@@ -59,4 +59,34 @@ router.get('/', (req, res) => {
   res.json(rows.map(serialize));
 });
 
+router.patch('/:id', (req, res) => {
+  const existing = db.prepare('SELECT * FROM feedings WHERE id = ? AND baby_id = ?').get(req.params.id, req.baby.id);
+  if (!existing) {
+    return res.status(404).json({ error: 'Feeding not found' });
+  }
+  const { type, amountMl, durationMin, startedAt, notes } = req.body || {};
+  if (type !== undefined && !VALID_TYPES.includes(type)) {
+    return res.status(400).json({ error: `type must be one of ${VALID_TYPES.join(', ')}` });
+  }
+  db.prepare(
+    `UPDATE feedings SET
+       type = ?, amount_ml = ?, duration_min = ?, started_at = ?, notes = ?
+     WHERE id = ?`
+  ).run(
+    type ?? existing.type,
+    amountMl !== undefined ? amountMl : existing.amount_ml,
+    durationMin !== undefined ? durationMin : existing.duration_min,
+    startedAt ?? existing.started_at,
+    notes !== undefined ? notes : existing.notes,
+    existing.id
+  );
+  const row = db
+    .prepare(
+      `SELECT f.*, u.name AS loggedByName FROM feedings f
+       JOIN users u ON u.id = f.user_id WHERE f.id = ?`
+    )
+    .get(existing.id);
+  res.json(serialize(row));
+});
+
 module.exports = router;

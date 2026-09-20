@@ -15,7 +15,7 @@ import ChipPicker from '../components/ChipPicker';
 import TimeAgoPicker from '../components/TimeAgoPicker';
 import TimedField, { TimedValue } from '../components/TimedField';
 import { useAuth } from '../context/AuthContext';
-import type { FeedingType } from '../api/types';
+import type { Feeding, FeedingType } from '../api/types';
 import { minutesAgoToIso } from '../utils/time';
 
 const TYPES: { value: FeedingType; label: string }[] = [
@@ -31,15 +31,26 @@ const SHOWS_AMOUNT: FeedingType[] = ['bottle', 'combo'];
 export default function AddFeedingScreen() {
   const navigation = useNavigation<any>();
   const route = useRoute<any>();
-  const { babyId } = route.params as { babyId: string };
+  const { babyId, entry } = route.params as {
+    babyId: string;
+    entry?: Pick<Feeding, 'id' | 'type' | 'amountMl' | 'durationMin' | 'startedAt' | 'notes'>;
+  };
+  const isEditing = !!entry;
   const { token } = useAuth();
 
-  const [type, setType] = useState<FeedingType>('bottle');
-  const [amountMl, setAmountMl] = useState('');
-  const [timed, setTimed] = useState<TimedValue>({ startedAt: new Date().toISOString(), durationMin: null });
-  const [minutesAgo, setMinutesAgo] = useState(0);
-  const [manualDurationMin, setManualDurationMin] = useState('');
-  const [notes, setNotes] = useState('');
+  const [type, setType] = useState<FeedingType>(entry?.type ?? 'bottle');
+  const [amountMl, setAmountMl] = useState(entry?.amountMl != null ? String(entry.amountMl) : '');
+  const [timed, setTimed] = useState<TimedValue>({
+    startedAt: entry?.startedAt ?? new Date().toISOString(),
+    durationMin: entry?.durationMin ?? null,
+  });
+  const [minutesAgo, setMinutesAgo] = useState(
+    entry ? Math.max(0, Math.round((Date.now() - new Date(entry.startedAt).getTime()) / 60000)) : 0
+  );
+  const [manualDurationMin, setManualDurationMin] = useState(
+    entry?.durationMin != null ? String(entry.durationMin) : ''
+  );
+  const [notes, setNotes] = useState(entry?.notes ?? '');
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
@@ -58,13 +69,19 @@ export default function AddFeedingScreen() {
           ? Number(manualDurationMin)
           : undefined;
 
-      await api.logFeeding(token, babyId, {
+      const body = {
         type,
         amountMl: showsAmount && amountMl ? Number(amountMl) : undefined,
         durationMin,
         startedAt,
         notes: notes.trim() || undefined,
-      });
+      };
+
+      if (isEditing) {
+        await api.updateFeeding(token, babyId, entry.id, body);
+      } else {
+        await api.logFeeding(token, babyId, body);
+      }
       navigation.goBack();
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Could not save. Try again.');
@@ -76,7 +93,7 @@ export default function AddFeedingScreen() {
   return (
     <KeyboardAvoidingView style={styles.container} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
-        <Text style={styles.title}>Log a feeding</Text>
+        <Text style={styles.title}>{isEditing ? 'Edit feeding' : 'Log a feeding'}</Text>
 
         <Text style={styles.label}>Type</Text>
         <ChipPicker options={TYPES} value={type} onChange={setType} />
@@ -95,7 +112,11 @@ export default function AddFeedingScreen() {
         )}
 
         {usesTimer ? (
-          <TimedField label={type === 'combo' ? 'Breastfeeding time' : 'When & how long'} onChange={setTimed} />
+          <TimedField
+            label={type === 'combo' ? 'Breastfeeding time' : 'When & how long'}
+            onChange={setTimed}
+            initialValue={entry ? timed : undefined}
+          />
         ) : (
           <>
             <Text style={styles.label}>When</Text>
@@ -128,7 +149,11 @@ export default function AddFeedingScreen() {
         {error ? <Text style={styles.error}>{error}</Text> : null}
 
         <TouchableOpacity style={styles.button} onPress={onSubmit} disabled={submitting}>
-          {submitting ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>Save feeding</Text>}
+          {submitting ? (
+            <ActivityIndicator color="#fff" />
+          ) : (
+            <Text style={styles.buttonText}>{isEditing ? 'Save changes' : 'Save feeding'}</Text>
+          )}
         </TouchableOpacity>
       </ScrollView>
     </KeyboardAvoidingView>
