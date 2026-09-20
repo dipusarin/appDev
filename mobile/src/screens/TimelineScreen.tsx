@@ -6,20 +6,37 @@ import { useAuth } from '../context/AuthContext';
 import type { TimelineEntry } from '../api/types';
 import { formatClockTime, formatRelativeTime } from '../utils/time';
 
-const FEEDING_LABELS: Record<string, string> = { breast: 'Breastfed', bottle: 'Bottle', formula: 'Formula' };
-const DIAPER_LABELS: Record<string, string> = { wet: 'Wet diaper', dirty: 'Dirty diaper', both: 'Wet & dirty diaper' };
+const FEEDING_LABELS: Record<string, string> = {
+  breastfeed: 'Breastfed',
+  bottle: 'Bottle',
+  solids: 'Solids',
+  combo: 'Combo feed',
+};
+const DIAPER_LABELS: Record<string, string> = { wet: 'Wet diaper', dirty: 'Dirty diaper', dry: 'Dry diaper' };
 
 function EntryRow({ entry }: { entry: TimelineEntry }) {
   const isFeeding = entry.kind === 'feeding';
-  const label = isFeeding ? FEEDING_LABELS[entry.type] : DIAPER_LABELS[entry.type];
+  const isDiaper = entry.kind === 'diaper';
+  const isPump = entry.kind === 'pump';
+
+  const label = isFeeding
+    ? FEEDING_LABELS[entry.type as string]
+    : isDiaper
+      ? DIAPER_LABELS[entry.type as string]
+      : 'Pumped';
+
   const details = [
     isFeeding && entry.amountMl ? `${entry.amountMl} ml` : null,
-    isFeeding && entry.durationMin ? `${entry.durationMin} min` : null,
+    (isFeeding || isPump) && entry.durationMin ? `${entry.durationMin} min` : null,
+    isDiaper && entry.texture ? entry.texture : null,
+    isDiaper && entry.color ? entry.color : null,
   ].filter(Boolean);
+
+  const dotStyle = isFeeding ? styles.feedingDot : isPump ? styles.pumpDot : styles.diaperDot;
 
   return (
     <View style={styles.row}>
-      <View style={[styles.dot, isFeeding ? styles.feedingDot : styles.diaperDot]} />
+      <View style={[styles.dot, dotStyle]} />
       <View style={styles.rowContent}>
         <View style={styles.rowHeader}>
           <Text style={styles.rowTitle}>{label}</Text>
@@ -102,6 +119,7 @@ const styles = StyleSheet.create({
   row: { flexDirection: 'row', marginBottom: 18 },
   dot: { width: 10, height: 10, borderRadius: 5, marginTop: 6, marginRight: 12 },
   feedingDot: { backgroundColor: '#7B61C7' },
+  pumpDot: { backgroundColor: '#3E9C7F' },
   diaperDot: { backgroundColor: '#F0965B' },
   rowContent: { flex: 1, backgroundColor: '#fff', borderRadius: 14, padding: 14, borderWidth: 1, borderColor: '#F0EAF9' },
   rowHeader: { flexDirection: 'row', justifyContent: 'space-between' },

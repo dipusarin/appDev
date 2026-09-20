@@ -9,19 +9,24 @@ import {
   Text,
   TextInput,
   TouchableOpacity,
-  View,
 } from 'react-native';
 import { api, ApiError } from '../api/client';
+import ChipPicker from '../components/ChipPicker';
 import TimeAgoPicker from '../components/TimeAgoPicker';
+import TimedField, { TimedValue } from '../components/TimedField';
 import { useAuth } from '../context/AuthContext';
 import type { FeedingType } from '../api/types';
 import { minutesAgoToIso } from '../utils/time';
 
 const TYPES: { value: FeedingType; label: string }[] = [
-  { value: 'breast', label: 'Breast' },
-  { value: 'bottle', label: 'Bottle' },
-  { value: 'formula', label: 'Formula' },
+  { value: 'breastfeed', label: 'Breastfeed' },
+  { value: 'bottle', label: 'Bottle feed' },
+  { value: 'solids', label: 'Solids' },
+  { value: 'combo', label: 'Combo feed' },
 ];
+
+const USES_TIMER: FeedingType[] = ['breastfeed', 'combo'];
+const SHOWS_AMOUNT: FeedingType[] = ['bottle', 'combo'];
 
 export default function AddFeedingScreen() {
   const navigation = useNavigation<any>();
@@ -31,22 +36,33 @@ export default function AddFeedingScreen() {
 
   const [type, setType] = useState<FeedingType>('bottle');
   const [amountMl, setAmountMl] = useState('');
-  const [durationMin, setDurationMin] = useState('');
+  const [timed, setTimed] = useState<TimedValue>({ startedAt: new Date().toISOString(), durationMin: null });
   const [minutesAgo, setMinutesAgo] = useState(0);
+  const [manualDurationMin, setManualDurationMin] = useState('');
   const [notes, setNotes] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+
+  const usesTimer = USES_TIMER.includes(type);
+  const showsAmount = SHOWS_AMOUNT.includes(type);
 
   const onSubmit = async () => {
     if (!token) return;
     setError(null);
     setSubmitting(true);
     try {
+      const startedAt = usesTimer ? timed.startedAt : minutesAgoToIso(minutesAgo);
+      const durationMin = usesTimer
+        ? timed.durationMin ?? undefined
+        : manualDurationMin
+          ? Number(manualDurationMin)
+          : undefined;
+
       await api.logFeeding(token, babyId, {
         type,
-        amountMl: amountMl ? Number(amountMl) : undefined,
-        durationMin: durationMin ? Number(durationMin) : undefined,
-        startedAt: minutesAgoToIso(minutesAgo),
+        amountMl: showsAmount && amountMl ? Number(amountMl) : undefined,
+        durationMin,
+        startedAt,
         notes: notes.trim() || undefined,
       });
       navigation.goBack();
@@ -63,19 +79,9 @@ export default function AddFeedingScreen() {
         <Text style={styles.title}>Log a feeding</Text>
 
         <Text style={styles.label}>Type</Text>
-        <View style={styles.row}>
-          {TYPES.map((t) => (
-            <TouchableOpacity
-              key={t.value}
-              style={[styles.chip, type === t.value && styles.chipActive]}
-              onPress={() => setType(t.value)}
-            >
-              <Text style={[styles.chipText, type === t.value && styles.chipTextActive]}>{t.label}</Text>
-            </TouchableOpacity>
-          ))}
-        </View>
+        <ChipPicker options={TYPES} value={type} onChange={setType} />
 
-        {type !== 'breast' && (
+        {showsAmount && (
           <>
             <Text style={styles.label}>Amount (ml)</Text>
             <TextInput
@@ -88,22 +94,32 @@ export default function AddFeedingScreen() {
           </>
         )}
 
-        <Text style={styles.label}>Duration (minutes, optional)</Text>
-        <TextInput
-          style={styles.input}
-          keyboardType="number-pad"
-          placeholder="e.g. 15"
-          value={durationMin}
-          onChangeText={setDurationMin}
-        />
+        {usesTimer ? (
+          <TimedField label={type === 'combo' ? 'Breastfeeding time' : 'When & how long'} onChange={setTimed} />
+        ) : (
+          <>
+            <Text style={styles.label}>When</Text>
+            <TimeAgoPicker minutesAgo={minutesAgo} onChange={setMinutesAgo} />
 
-        <Text style={styles.label}>When</Text>
-        <TimeAgoPicker minutesAgo={minutesAgo} onChange={setMinutesAgo} />
+            {type === 'bottle' && (
+              <>
+                <Text style={styles.label}>Duration (minutes, optional)</Text>
+                <TextInput
+                  style={styles.input}
+                  keyboardType="number-pad"
+                  placeholder="e.g. 15"
+                  value={manualDurationMin}
+                  onChangeText={setManualDurationMin}
+                />
+              </>
+            )}
+          </>
+        )}
 
         <Text style={styles.label}>Notes (optional)</Text>
         <TextInput
           style={[styles.input, styles.notesInput]}
-          placeholder="Anything worth remembering?"
+          placeholder={type === 'solids' ? 'What did they eat?' : 'Anything worth remembering?'}
           value={notes}
           onChangeText={setNotes}
           multiline
@@ -124,18 +140,6 @@ const styles = StyleSheet.create({
   scroll: { padding: 24 },
   title: { fontSize: 22, fontWeight: '700', color: '#3E2E63', marginBottom: 20 },
   label: { fontSize: 13, fontWeight: '600', color: '#8A7CA8', marginBottom: 8, marginTop: 16, textTransform: 'uppercase' },
-  row: { flexDirection: 'row', gap: 8, flexWrap: 'wrap' },
-  chip: {
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderRadius: 20,
-    backgroundColor: '#fff',
-    borderWidth: 1,
-    borderColor: '#E6DFF2',
-  },
-  chipActive: { backgroundColor: '#7B61C7', borderColor: '#7B61C7' },
-  chipText: { color: '#5B4B8A', fontWeight: '600' },
-  chipTextActive: { color: '#fff' },
   input: {
     backgroundColor: '#fff',
     borderRadius: 12,

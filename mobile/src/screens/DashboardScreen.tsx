@@ -15,8 +15,13 @@ import { useAuth } from '../context/AuthContext';
 import type { BabySummary } from '../api/types';
 import { formatClockTime, formatRelativeTime } from '../utils/time';
 
-const FEEDING_LABELS: Record<string, string> = { breast: 'Breastfed', bottle: 'Bottle', formula: 'Formula' };
-const DIAPER_LABELS: Record<string, string> = { wet: 'Wet', dirty: 'Dirty', both: 'Wet & dirty' };
+const FEEDING_LABELS: Record<string, string> = {
+  breastfeed: 'Breastfed',
+  bottle: 'Bottle',
+  solids: 'Solids',
+  combo: 'Combo feed',
+};
+const DIAPER_LABELS: Record<string, string> = { wet: 'Wet', dirty: 'Dirty', dry: 'Dry' };
 
 function AddBabyForm() {
   const { addBaby } = useAuth();
@@ -137,12 +142,31 @@ export default function DashboardScreen() {
               <>
                 <Text style={styles.cardValue}>{formatRelativeTime(summary.lastDiaper.loggedAt)}</Text>
                 <Text style={styles.cardMeta}>
-                  {DIAPER_LABELS[summary.lastDiaper.type]} · by {summary.lastDiaper.loggedByName}
+                  {DIAPER_LABELS[summary.lastDiaper.type]}
+                  {summary.lastDiaper.texture ? ` · ${summary.lastDiaper.texture}` : ''}
+                  {summary.lastDiaper.color ? ` · ${summary.lastDiaper.color}` : ''}
+                  {'  '}by {summary.lastDiaper.loggedByName}
                 </Text>
                 <Text style={styles.cardTime}>{formatClockTime(summary.lastDiaper.loggedAt)}</Text>
               </>
             ) : (
               <Text style={styles.cardMeta}>No diaper changes logged yet</Text>
+            )}
+          </View>
+
+          <View style={styles.card}>
+            <Text style={styles.cardLabel}>Last pump session</Text>
+            {summary?.lastPump ? (
+              <>
+                <Text style={styles.cardValue}>{formatRelativeTime(summary.lastPump.startedAt)}</Text>
+                <Text style={styles.cardMeta}>
+                  {summary.lastPump.durationMin ? `${summary.lastPump.durationMin} min` : 'Logged'}
+                  {'  '}by {summary.lastPump.loggedByName}
+                </Text>
+                <Text style={styles.cardTime}>{formatClockTime(summary.lastPump.startedAt)}</Text>
+              </>
+            ) : (
+              <Text style={styles.cardMeta}>No pump sessions logged yet</Text>
             )}
           </View>
         </>
@@ -154,6 +178,12 @@ export default function DashboardScreen() {
           onPress={() => navigation.navigate('AddFeeding', { babyId: selectedBabyId })}
         >
           <Text style={styles.quickAddText}>+ Feeding</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.quickAddButton, styles.pumpButton]}
+          onPress={() => navigation.navigate('AddPump', { babyId: selectedBabyId })}
+        >
+          <Text style={styles.quickAddText}>+ Pump</Text>
         </TouchableOpacity>
         <TouchableOpacity
           style={[styles.quickAddButton, styles.diaperButton]}
@@ -192,11 +222,12 @@ const styles = StyleSheet.create({
   cardValue: { fontSize: 24, fontWeight: '700', color: '#3E2E63', marginTop: 6 },
   cardMeta: { fontSize: 14, color: '#5B4B8A', marginTop: 4 },
   cardTime: { fontSize: 12, color: '#B3A6CC', marginTop: 6 },
-  quickAddRow: { flexDirection: 'row', gap: 12, marginTop: 8 },
-  quickAddButton: { flex: 1, borderRadius: 14, paddingVertical: 18, alignItems: 'center' },
+  quickAddRow: { flexDirection: 'row', gap: 10, marginTop: 8 },
+  quickAddButton: { flex: 1, borderRadius: 14, paddingVertical: 16, alignItems: 'center' },
   feedingButton: { backgroundColor: '#7B61C7' },
+  pumpButton: { backgroundColor: '#3E9C7F' },
   diaperButton: { backgroundColor: '#F0965B' },
-  quickAddText: { color: '#fff', fontSize: 16, fontWeight: '700' },
+  quickAddText: { color: '#fff', fontSize: 14, fontWeight: '700' },
   emptyState: { padding: 8 },
   emptyTitle: { fontSize: 18, fontWeight: '600', color: '#3E2E63', marginBottom: 16, textAlign: 'center' },
   input: {

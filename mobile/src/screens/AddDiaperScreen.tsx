@@ -9,18 +9,35 @@ import {
   Text,
   TextInput,
   TouchableOpacity,
-  View,
 } from 'react-native';
 import { api, ApiError } from '../api/client';
+import ChipPicker from '../components/ChipPicker';
 import TimeAgoPicker from '../components/TimeAgoPicker';
 import { useAuth } from '../context/AuthContext';
-import type { DiaperType } from '../api/types';
+import type { DiaperColor, DiaperTexture, DiaperType } from '../api/types';
 import { minutesAgoToIso } from '../utils/time';
 
 const TYPES: { value: DiaperType; label: string }[] = [
   { value: 'wet', label: 'Wet' },
   { value: 'dirty', label: 'Dirty' },
-  { value: 'both', label: 'Wet & dirty' },
+  { value: 'dry', label: 'Dry' },
+];
+
+const TEXTURES: { value: DiaperTexture; label: string }[] = [
+  { value: 'runny', label: 'Runny' },
+  { value: 'mucosy', label: 'Mucosy' },
+  { value: 'mushy', label: 'Mushy' },
+  { value: 'solid', label: 'Solid' },
+  { value: 'pebbles', label: 'Pebbles' },
+];
+
+const COLORS: { value: DiaperColor; label: string }[] = [
+  { value: 'black', label: 'Black' },
+  { value: 'green', label: 'Green' },
+  { value: 'yellow', label: 'Yellow' },
+  { value: 'brown', label: 'Brown' },
+  { value: 'red', label: 'Red' },
+  { value: 'gray', label: 'Gray' },
 ];
 
 export default function AddDiaperScreen() {
@@ -30,6 +47,8 @@ export default function AddDiaperScreen() {
   const { token } = useAuth();
 
   const [type, setType] = useState<DiaperType>('wet');
+  const [texture, setTexture] = useState<DiaperTexture | null>(null);
+  const [color, setColor] = useState<DiaperColor | null>(null);
   const [minutesAgo, setMinutesAgo] = useState(0);
   const [notes, setNotes] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -42,6 +61,8 @@ export default function AddDiaperScreen() {
     try {
       await api.logDiaper(token, babyId, {
         type,
+        texture: type === 'dirty' && texture ? texture : undefined,
+        color: type === 'dirty' && color ? color : undefined,
         loggedAt: minutesAgoToIso(minutesAgo),
         notes: notes.trim() || undefined,
       });
@@ -59,17 +80,17 @@ export default function AddDiaperScreen() {
         <Text style={styles.title}>Log a diaper change</Text>
 
         <Text style={styles.label}>Type</Text>
-        <View style={styles.row}>
-          {TYPES.map((t) => (
-            <TouchableOpacity
-              key={t.value}
-              style={[styles.chip, type === t.value && styles.chipActive]}
-              onPress={() => setType(t.value)}
-            >
-              <Text style={[styles.chipText, type === t.value && styles.chipTextActive]}>{t.label}</Text>
-            </TouchableOpacity>
-          ))}
-        </View>
+        <ChipPicker options={TYPES} value={type} onChange={setType} activeColor="#F0965B" />
+
+        {type === 'dirty' && (
+          <>
+            <Text style={styles.label}>Texture</Text>
+            <ChipPicker options={TEXTURES} value={texture} onChange={setTexture} activeColor="#F0965B" />
+
+            <Text style={styles.label}>Color</Text>
+            <ChipPicker options={COLORS} value={color} onChange={setColor} activeColor="#F0965B" />
+          </>
+        )}
 
         <Text style={styles.label}>When</Text>
         <TimeAgoPicker minutesAgo={minutesAgo} onChange={setMinutesAgo} />
@@ -98,18 +119,6 @@ const styles = StyleSheet.create({
   scroll: { padding: 24 },
   title: { fontSize: 22, fontWeight: '700', color: '#3E2E63', marginBottom: 20 },
   label: { fontSize: 13, fontWeight: '600', color: '#8A7CA8', marginBottom: 8, marginTop: 16, textTransform: 'uppercase' },
-  row: { flexDirection: 'row', gap: 8, flexWrap: 'wrap' },
-  chip: {
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderRadius: 20,
-    backgroundColor: '#fff',
-    borderWidth: 1,
-    borderColor: '#E6DFF2',
-  },
-  chipActive: { backgroundColor: '#F0965B', borderColor: '#F0965B' },
-  chipText: { color: '#5B4B8A', fontWeight: '600' },
-  chipTextActive: { color: '#fff' },
   input: {
     backgroundColor: '#fff',
     borderRadius: 12,

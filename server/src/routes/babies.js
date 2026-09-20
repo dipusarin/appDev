@@ -5,6 +5,7 @@ const { requireAuth } = require('../middleware/auth');
 const { loadBabyForFamily } = require('../middleware/babyAccess');
 const feedingsRouter = require('./feedings');
 const diapersRouter = require('./diapers');
+const pumpsRouter = require('./pumps');
 
 const router = express.Router();
 router.use(requireAuth);
@@ -51,6 +52,13 @@ router.get('/:babyId/summary', loadBabyForFamily, (req, res) => {
        WHERE d.baby_id = ? ORDER BY d.logged_at DESC LIMIT 1`
     )
     .get(req.baby.id);
+  const lastPump = db
+    .prepare(
+      `SELECT p.*, u.name AS loggedByName FROM pumps p
+       JOIN users u ON u.id = p.user_id
+       WHERE p.baby_id = ? ORDER BY p.started_at DESC LIMIT 1`
+    )
+    .get(req.baby.id);
 
   res.json({
     baby: serializeBaby(req.baby),
@@ -69,9 +77,20 @@ router.get('/:babyId/summary', loadBabyForFamily, (req, res) => {
       ? {
           id: lastDiaper.id,
           type: lastDiaper.type,
+          texture: lastDiaper.texture,
+          color: lastDiaper.color,
           loggedAt: lastDiaper.logged_at,
           notes: lastDiaper.notes,
           loggedByName: lastDiaper.loggedByName,
+        }
+      : null,
+    lastPump: lastPump
+      ? {
+          id: lastPump.id,
+          startedAt: lastPump.started_at,
+          durationMin: lastPump.duration_min,
+          notes: lastPump.notes,
+          loggedByName: lastPump.loggedByName,
         }
       : null,
   });
@@ -92,14 +111,23 @@ router.get('/:babyId/timeline', loadBabyForFamily, (req, res) => {
 
   const diapers = db
     .prepare(
-      `SELECT d.id, d.type, d.logged_at AS timestamp, d.notes, u.name AS loggedByName
+      `SELECT d.id, d.type, d.texture, d.color, d.logged_at AS timestamp, d.notes, u.name AS loggedByName
        FROM diapers d JOIN users u ON u.id = d.user_id
        WHERE d.baby_id = ? ORDER BY d.logged_at DESC LIMIT ?`
     )
     .all(req.baby.id, limit)
     .map((row) => ({ ...row, kind: 'diaper' }));
 
-  const merged = [...feedings, ...diapers]
+  const pumps = db
+    .prepare(
+      `SELECT p.id, p.duration_min AS durationMin, p.started_at AS timestamp, p.notes, u.name AS loggedByName
+       FROM pumps p JOIN users u ON u.id = p.user_id
+       WHERE p.baby_id = ? ORDER BY p.started_at DESC LIMIT ?`
+    )
+    .all(req.baby.id, limit)
+    .map((row) => ({ ...row, kind: 'pump' }));
+
+  const merged = [...feedings, ...diapers, ...pumps]
     .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp))
     .slice(0, limit);
 
@@ -108,5 +136,6 @@ router.get('/:babyId/timeline', loadBabyForFamily, (req, res) => {
 
 router.use('/:babyId/feedings', loadBabyForFamily, feedingsRouter);
 router.use('/:babyId/diapers', loadBabyForFamily, diapersRouter);
+router.use('/:babyId/pumps', loadBabyForFamily, pumpsRouter);
 
 module.exports = router;

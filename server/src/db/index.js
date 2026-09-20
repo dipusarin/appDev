@@ -36,10 +36,20 @@ db.exec(`
     id TEXT PRIMARY KEY,
     baby_id TEXT NOT NULL REFERENCES babies(id),
     user_id TEXT NOT NULL REFERENCES users(id),
-    type TEXT NOT NULL CHECK (type IN ('breast', 'bottle', 'formula')),
+    type TEXT NOT NULL CHECK (type IN ('breastfeed', 'bottle', 'solids', 'combo')),
     amount_ml REAL,
     duration_min REAL,
     started_at TEXT NOT NULL,
+    notes TEXT,
+    created_at TEXT NOT NULL DEFAULT (datetime('now'))
+  );
+
+  CREATE TABLE IF NOT EXISTS pumps (
+    id TEXT PRIMARY KEY,
+    baby_id TEXT NOT NULL REFERENCES babies(id),
+    user_id TEXT NOT NULL REFERENCES users(id),
+    started_at TEXT NOT NULL,
+    duration_min REAL,
     notes TEXT,
     created_at TEXT NOT NULL DEFAULT (datetime('now'))
   );
@@ -48,13 +58,16 @@ db.exec(`
     id TEXT PRIMARY KEY,
     baby_id TEXT NOT NULL REFERENCES babies(id),
     user_id TEXT NOT NULL REFERENCES users(id),
-    type TEXT NOT NULL CHECK (type IN ('wet', 'dirty', 'both')),
+    type TEXT NOT NULL CHECK (type IN ('wet', 'dirty', 'dry')),
+    texture TEXT CHECK (texture IN ('runny', 'mucosy', 'mushy', 'solid', 'pebbles')),
+    color TEXT CHECK (color IN ('black', 'green', 'yellow', 'brown', 'red', 'gray')),
     logged_at TEXT NOT NULL,
     notes TEXT,
     created_at TEXT NOT NULL DEFAULT (datetime('now'))
   );
 
   CREATE INDEX IF NOT EXISTS idx_feedings_baby ON feedings(baby_id, started_at DESC);
+  CREATE INDEX IF NOT EXISTS idx_pumps_baby ON pumps(baby_id, started_at DESC);
   CREATE INDEX IF NOT EXISTS idx_diapers_baby ON diapers(baby_id, logged_at DESC);
   CREATE INDEX IF NOT EXISTS idx_babies_family ON babies(family_id);
   CREATE INDEX IF NOT EXISTS idx_users_family ON users(family_id);

@@ -4,12 +4,16 @@ const db = require('../db');
 
 const router = express.Router({ mergeParams: true });
 
-const VALID_TYPES = ['wet', 'dirty', 'both'];
+const VALID_TYPES = ['wet', 'dirty', 'dry'];
+const VALID_TEXTURES = ['runny', 'mucosy', 'mushy', 'solid', 'pebbles'];
+const VALID_COLORS = ['black', 'green', 'yellow', 'brown', 'red', 'gray'];
 
 function serialize(row) {
   return {
     id: row.id,
     type: row.type,
+    texture: row.texture,
+    color: row.color,
     loggedAt: row.logged_at,
     notes: row.notes,
     loggedByName: row.loggedByName,
@@ -18,15 +22,30 @@ function serialize(row) {
 }
 
 router.post('/', (req, res) => {
-  const { type, loggedAt, notes } = req.body || {};
+  const { type, texture, color, loggedAt, notes } = req.body || {};
   if (!VALID_TYPES.includes(type)) {
     return res.status(400).json({ error: `type must be one of ${VALID_TYPES.join(', ')}` });
   }
+  if (texture !== undefined && texture !== null && !VALID_TEXTURES.includes(texture)) {
+    return res.status(400).json({ error: `texture must be one of ${VALID_TEXTURES.join(', ')}` });
+  }
+  if (color !== undefined && color !== null && !VALID_COLORS.includes(color)) {
+    return res.status(400).json({ error: `color must be one of ${VALID_COLORS.join(', ')}` });
+  }
   const id = crypto.randomUUID();
   db.prepare(
-    `INSERT INTO diapers (id, baby_id, user_id, type, logged_at, notes)
-     VALUES (?, ?, ?, ?, ?, ?)`
-  ).run(id, req.baby.id, req.user.id, type, loggedAt || new Date().toISOString(), notes || null);
+    `INSERT INTO diapers (id, baby_id, user_id, type, texture, color, logged_at, notes)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
+  ).run(
+    id,
+    req.baby.id,
+    req.user.id,
+    type,
+    texture || null,
+    color || null,
+    loggedAt || new Date().toISOString(),
+    notes || null
+  );
   const row = db
     .prepare(
       `SELECT d.*, u.name AS loggedByName FROM diapers d

@@ -3,11 +3,14 @@ import type {
   Baby,
   BabySummary,
   Diaper,
+  DiaperColor,
+  DiaperTexture,
   DiaperType,
   Family,
   Feeding,
   FeedingType,
   Member,
+  Pump,
   TimelineEntry,
   User,
 } from './types';
@@ -96,6 +99,12 @@ export const api = {
   logDiaper: (
     token: string,
     babyId: string,
-    body: { type: DiaperType; loggedAt?: string; notes?: string }
+    body: { type: DiaperType; texture?: DiaperTexture; color?: DiaperColor; loggedAt?: string; notes?: string }
   ) => request<Diaper>(`/babies/${babyId}/diapers`, { method: 'POST', body, token }),
+
+  logPump: (
+    token: string,
+    babyId: string,
+    body: { startedAt?: string; durationMin?: number; notes?: string }
+  ) => request<Pump>(`/babies/${babyId}/pumps`, { method: 'POST', body, token }),
 };

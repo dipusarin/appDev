@@ -6,6 +6,7 @@ import { ActivityIndicator, Text, View } from 'react-native';
 import { useAuth } from '../context/AuthContext';
 import AddDiaperScreen from '../screens/AddDiaperScreen';
 import AddFeedingScreen from '../screens/AddFeedingScreen';
+import AddPumpScreen from '../screens/AddPumpScreen';
 import DashboardScreen from '../screens/DashboardScreen';
 import FamilyScreen from '../screens/FamilyScreen';
 import LoginScreen from '../screens/LoginScreen';
@@ -57,6 +58,7 @@ function AppNavigator() {
       <RootStack.Screen name="Main" component={MainTabs} />
       <RootStack.Group screenOptions={{ presentation: 'modal', headerShown: true }}>
         <RootStack.Screen name="AddFeeding" component={AddFeedingScreen} options={{ title: 'Log feeding' }} />
+        <RootStack.Screen name="AddPump" component={AddPumpScreen} options={{ title: 'Log pump session' }} />
         <RootStack.Screen name="AddDiaper" component={AddDiaperScreen} options={{ title: 'Log diaper change' }} />
       </RootStack.Group>
     </RootStack.Navigator>
