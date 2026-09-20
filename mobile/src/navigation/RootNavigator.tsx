@@ -9,6 +9,7 @@ import { useAuth } from '../context/AuthContext';
 import AddDiaperScreen from '../screens/AddDiaperScreen';
 import AddFeedingScreen from '../screens/AddFeedingScreen';
 import AddPumpScreen from '../screens/AddPumpScreen';
+import AddSleepScreen from '../screens/AddSleepScreen';
 import DashboardScreen from '../screens/DashboardScreen';
 import FamilyScreen from '../screens/FamilyScreen';
 import LoginScreen from '../screens/LoginScreen';
@@ -77,9 +78,26 @@ function AppNavigator() {
     >
       <RootStack.Screen name="Main" component={MainTabs} options={{ headerShown: false }} />
       <RootStack.Group screenOptions={{ presentation: 'modal' }}>
-        <RootStack.Screen name="AddFeeding" component={AddFeedingScreen} options={{ title: 'Log feeding' }} />
-        <RootStack.Screen name="AddPump" component={AddPumpScreen} options={{ title: 'Log pump session' }} />
-        <RootStack.Screen name="AddDiaper" component={AddDiaperScreen} options={{ title: 'Log diaper change' }} />
+        <RootStack.Screen
+          name="AddFeeding"
+          component={AddFeedingScreen}
+          options={({ route }) => ({ title: (route.params as any)?.entry ? 'Edit feeding' : 'Log feeding' })}
+        />
+        <RootStack.Screen
+          name="AddPump"
+          component={AddPumpScreen}
+          options={({ route }) => ({ title: (route.params as any)?.entry ? 'Edit pump session' : 'Log pump session' })}
+        />
+        <RootStack.Screen
+          name="AddSleep"
+          component={AddSleepScreen}
+          options={({ route }) => ({ title: (route.params as any)?.entry ? 'Edit sleep' : 'Log sleep' })}
+        />
+        <RootStack.Screen
+          name="AddDiaper"
+          component={AddDiaperScreen}
+          options={({ route }) => ({ title: (route.params as any)?.entry ? 'Edit diaper change' : 'Log diaper change' })}
+        />
       </RootStack.Group>
     </RootStack.Navigator>
   );

@@ -15,6 +15,8 @@ export const colors = {
   pumpSoft: '#E3F9F1',
   diaper: '#FF9F43',
   diaperSoft: '#FFF1E1',
+  sleep: '#4A6FE3',
+  sleepSoft: '#E9EEFD',
 
   good: '#12B886',
   warn: '#F5A623',

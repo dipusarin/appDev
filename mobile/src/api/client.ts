@@ -11,6 +11,8 @@ import type {
   FeedingType,
   Member,
   Pump,
+  Sleep,
+  SleepType,
   TimelineEntry,
   User,
 } from './types';
@@ -108,6 +110,12 @@ export const api = {
     body: { startedAt?: string; durationMin?: number; notes?: string }
   ) => request<Pump>(`/babies/${babyId}/pumps`, { method: 'POST', body, token }),
 
+  logSleep: (
+    token: string,
+    babyId: string,
+    body: { type: SleepType; startedAt?: string; durationMin?: number; notes?: string }
+  ) => request<Sleep>(`/babies/${babyId}/sleep`, { method: 'POST', body, token }),
+
   updateFeeding: (
     token: string,
     babyId: string,
@@ -134,4 +142,23 @@ export const api = {
     id: string,
     body: Partial<{ startedAt: string; durationMin: number | null; notes: string | null }>
   ) => request<Pump>(`/babies/${babyId}/pumps/${id}`, { method: 'PATCH', body, token }),
+
+  updateSleep: (
+    token: string,
+    babyId: string,
+    id: string,
+    body: Partial<{ type: SleepType; startedAt: string; durationMin: number | null; notes: string | null }>
+  ) => request<Sleep>(`/babies/${babyId}/sleep/${id}`, { method: 'PATCH', body, token }),
+
+  deleteFeeding: (token: string, babyId: string, id: string) =>
+    request<void>(`/babies/${babyId}/feedings/${id}`, { method: 'DELETE', token }),
+
+  deleteDiaper: (token: string, babyId: string, id: string) =>
+    request<void>(`/babies/${babyId}/diapers/${id}`, { method: 'DELETE', token }),
+
+  deletePump: (token: string, babyId: string, id: string) =>
+    request<void>(`/babies/${babyId}/pumps/${id}`, { method: 'DELETE', token }),
+
+  deleteSleep: (token: string, babyId: string, id: string) =>
+    request<void>(`/babies/${babyId}/sleep/${id}`, { method: 'DELETE', token }),
 };

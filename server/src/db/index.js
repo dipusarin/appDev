@@ -54,6 +54,17 @@ db.exec(`
     created_at TEXT NOT NULL DEFAULT (datetime('now'))
   );
 
+  CREATE TABLE IF NOT EXISTS sleep_logs (
+    id TEXT PRIMARY KEY,
+    baby_id TEXT NOT NULL REFERENCES babies(id),
+    user_id TEXT NOT NULL REFERENCES users(id),
+    type TEXT NOT NULL CHECK (type IN ('nap', 'night')),
+    started_at TEXT NOT NULL,
+    duration_min REAL,
+    notes TEXT,
+    created_at TEXT NOT NULL DEFAULT (datetime('now'))
+  );
+
   CREATE TABLE IF NOT EXISTS diapers (
     id TEXT PRIMARY KEY,
     baby_id TEXT NOT NULL REFERENCES babies(id),
@@ -68,6 +79,7 @@ db.exec(`
 
   CREATE INDEX IF NOT EXISTS idx_feedings_baby ON feedings(baby_id, started_at DESC);
   CREATE INDEX IF NOT EXISTS idx_pumps_baby ON pumps(baby_id, started_at DESC);
+  CREATE INDEX IF NOT EXISTS idx_sleep_baby ON sleep_logs(baby_id, started_at DESC);
   CREATE INDEX IF NOT EXISTS idx_diapers_baby ON diapers(baby_id, logged_at DESC);
   CREATE INDEX IF NOT EXISTS idx_babies_family ON babies(family_id);
   CREATE INDEX IF NOT EXISTS idx_users_family ON users(family_id);

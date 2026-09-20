@@ -6,6 +6,7 @@ const { loadBabyForFamily } = require('../middleware/babyAccess');
 const feedingsRouter = require('./feedings');
 const diapersRouter = require('./diapers');
 const pumpsRouter = require('./pumps');
+const sleepRouter = require('./sleep');
 
 const router = express.Router();
 router.use(requireAuth);
@@ -59,6 +60,13 @@ router.get('/:babyId/summary', loadBabyForFamily, (req, res) => {
        WHERE p.baby_id = ? ORDER BY p.started_at DESC LIMIT 1`
     )
     .get(req.baby.id);
+  const lastSleep = db
+    .prepare(
+      `SELECT s.*, u.name AS loggedByName FROM sleep_logs s
+       JOIN users u ON u.id = s.user_id
+       WHERE s.baby_id = ? ORDER BY s.started_at DESC LIMIT 1`
+    )
+    .get(req.baby.id);
 
   res.json({
     baby: serializeBaby(req.baby),
@@ -91,6 +99,16 @@ router.get('/:babyId/summary', loadBabyForFamily, (req, res) => {
           durationMin: lastPump.duration_min,
           notes: lastPump.notes,
           loggedByName: lastPump.loggedByName,
+        }
+      : null,
+    lastSleep: lastSleep
+      ? {
+          id: lastSleep.id,
+          type: lastSleep.type,
+          startedAt: lastSleep.started_at,
+          durationMin: lastSleep.duration_min,
+          notes: lastSleep.notes,
+          loggedByName: lastSleep.loggedByName,
         }
       : null,
   });
@@ -127,7 +145,16 @@ router.get('/:babyId/timeline', loadBabyForFamily, (req, res) => {
     .all(req.baby.id, limit)
     .map((row) => ({ ...row, kind: 'pump' }));
 
-  const merged = [...feedings, ...diapers, ...pumps]
+  const sleeps = db
+    .prepare(
+      `SELECT s.id, s.type, s.duration_min AS durationMin, s.started_at AS timestamp, s.notes, u.name AS loggedByName
+       FROM sleep_logs s JOIN users u ON u.id = s.user_id
+       WHERE s.baby_id = ? ORDER BY s.started_at DESC LIMIT ?`
+    )
+    .all(req.baby.id, limit)
+    .map((row) => ({ ...row, kind: 'sleep' }));
+
+  const merged = [...feedings, ...diapers, ...pumps, ...sleeps]
     .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp))
     .slice(0, limit);
 
@@ -137,5 +164,6 @@ router.get('/:babyId/timeline', loadBabyForFamily, (req, res) => {
 router.use('/:babyId/feedings', loadBabyForFamily, feedingsRouter);
 router.use('/:babyId/diapers', loadBabyForFamily, diapersRouter);
 router.use('/:babyId/pumps', loadBabyForFamily, pumpsRouter);
+router.use('/:babyId/sleep', loadBabyForFamily, sleepRouter);
 
 module.exports = router;

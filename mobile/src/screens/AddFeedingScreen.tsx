@@ -13,11 +13,13 @@ import {
 } from 'react-native';
 import { api, ApiError } from '../api/client';
 import ChipPicker from '../components/ChipPicker';
+import DeleteEntryButton from '../components/DeleteEntryButton';
 import TimeAgoPicker from '../components/TimeAgoPicker';
 import TimedField, { TimedValue } from '../components/TimedField';
 import { useAuth } from '../context/AuthContext';
 import type { Feeding, FeedingType } from '../api/types';
 import { FEEDING_ICONS } from '../icons';
+import { cancelReminder, scheduleReminder } from '../notifications';
 import { colors, font, radius, shadow, spacing } from '../theme';
 import { minutesAgoToIso } from '../utils/time';
 
@@ -39,7 +41,8 @@ export default function AddFeedingScreen() {
     entry?: Pick<Feeding, 'id' | 'type' | 'amountMl' | 'durationMin' | 'startedAt' | 'notes'>;
   };
   const isEditing = !!entry;
-  const { token } = useAuth();
+  const { token, babies } = useAuth();
+  const babyName = babies.find((b) => b.id === babyId)?.name ?? 'Baby';
 
   const [type, setType] = useState<FeedingType>(entry?.type ?? 'bottle');
   const [amountMl, setAmountMl] = useState(entry?.amountMl != null ? String(entry.amountMl) : '');
@@ -85,12 +88,20 @@ export default function AddFeedingScreen() {
       } else {
         await api.logFeeding(token, babyId, body);
       }
+      scheduleReminder('feeding', babyId, babyName, startedAt).catch(() => {});
       navigation.goBack();
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Could not save. Try again.');
     } finally {
       setSubmitting(false);
     }
+  };
+
+  const onDelete = async () => {
+    if (!token || !entry) return;
+    await api.deleteFeeding(token, babyId, entry.id);
+    cancelReminder('feeding', babyId).catch(() => {});
+    navigation.goBack();
   };
 
   return (
@@ -159,6 +170,8 @@ export default function AddFeedingScreen() {
             <Text style={styles.buttonText}>{isEditing ? 'Save changes' : 'Save feeding'}</Text>
           )}
         </TouchableOpacity>
+
+        {isEditing && <DeleteEntryButton label="Feeding" onDelete={onDelete} />}
       </ScrollView>
     </KeyboardAvoidingView>
   );

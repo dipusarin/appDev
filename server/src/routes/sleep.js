@@ -4,15 +4,14 @@ const db = require('../db');
 
 const router = express.Router({ mergeParams: true });
 
-const VALID_TYPES = ['breastfeed', 'bottle', 'solids', 'combo'];
+const VALID_TYPES = ['nap', 'night'];
 
 function serialize(row) {
   return {
     id: row.id,
     type: row.type,
-    amountMl: row.amount_ml,
-    durationMin: row.duration_min,
     startedAt: row.started_at,
+    durationMin: row.duration_min,
     notes: row.notes,
     loggedByName: row.loggedByName,
     loggedByUserId: row.user_id,
@@ -20,28 +19,27 @@ function serialize(row) {
 }
 
 router.post('/', (req, res) => {
-  const { type, amountMl, durationMin, startedAt, notes } = req.body || {};
+  const { type, startedAt, durationMin, notes } = req.body || {};
   if (!VALID_TYPES.includes(type)) {
     return res.status(400).json({ error: `type must be one of ${VALID_TYPES.join(', ')}` });
   }
   const id = crypto.randomUUID();
   db.prepare(
-    `INSERT INTO feedings (id, baby_id, user_id, type, amount_ml, duration_min, started_at, notes)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
+    `INSERT INTO sleep_logs (id, baby_id, user_id, type, started_at, duration_min, notes)
+     VALUES (?, ?, ?, ?, ?, ?, ?)`
   ).run(
     id,
     req.baby.id,
     req.user.id,
     type,
-    amountMl ?? null,
-    durationMin ?? null,
     startedAt || new Date().toISOString(),
+    durationMin ?? null,
     notes || null
   );
   const row = db
     .prepare(
-      `SELECT f.*, u.name AS loggedByName FROM feedings f
-       JOIN users u ON u.id = f.user_id WHERE f.id = ?`
+      `SELECT s.*, u.name AS loggedByName FROM sleep_logs s
+       JOIN users u ON u.id = s.user_id WHERE s.id = ?`
     )
     .get(id);
   res.status(201).json(serialize(row));
@@ -51,50 +49,47 @@ router.get('/', (req, res) => {
   const limit = Math.min(Number(req.query.limit) || 50, 200);
   const rows = db
     .prepare(
-      `SELECT f.*, u.name AS loggedByName FROM feedings f
-       JOIN users u ON u.id = f.user_id
-       WHERE f.baby_id = ? ORDER BY f.started_at DESC LIMIT ?`
+      `SELECT s.*, u.name AS loggedByName FROM sleep_logs s
+       JOIN users u ON u.id = s.user_id
+       WHERE s.baby_id = ? ORDER BY s.started_at DESC LIMIT ?`
     )
     .all(req.baby.id, limit);
   res.json(rows.map(serialize));
 });
 
 router.patch('/:id', (req, res) => {
-  const existing = db.prepare('SELECT * FROM feedings WHERE id = ? AND baby_id = ?').get(req.params.id, req.baby.id);
+  const existing = db.prepare('SELECT * FROM sleep_logs WHERE id = ? AND baby_id = ?').get(req.params.id, req.baby.id);
   if (!existing) {
-    return res.status(404).json({ error: 'Feeding not found' });
+    return res.status(404).json({ error: 'Sleep log not found' });
   }
-  const { type, amountMl, durationMin, startedAt, notes } = req.body || {};
+  const { type, startedAt, durationMin, notes } = req.body || {};
   if (type !== undefined && !VALID_TYPES.includes(type)) {
     return res.status(400).json({ error: `type must be one of ${VALID_TYPES.join(', ')}` });
   }
   db.prepare(
-    `UPDATE feedings SET
-       type = ?, amount_ml = ?, duration_min = ?, started_at = ?, notes = ?
-     WHERE id = ?`
+    `UPDATE sleep_logs SET type = ?, started_at = ?, duration_min = ?, notes = ? WHERE id = ?`
   ).run(
     type ?? existing.type,
-    amountMl !== undefined ? amountMl : existing.amount_ml,
-    durationMin !== undefined ? durationMin : existing.duration_min,
     startedAt ?? existing.started_at,
+    durationMin !== undefined ? durationMin : existing.duration_min,
     notes !== undefined ? notes : existing.notes,
     existing.id
   );
   const row = db
     .prepare(
-      `SELECT f.*, u.name AS loggedByName FROM feedings f
-       JOIN users u ON u.id = f.user_id WHERE f.id = ?`
+      `SELECT s.*, u.name AS loggedByName FROM sleep_logs s
+       JOIN users u ON u.id = s.user_id WHERE s.id = ?`
     )
     .get(existing.id);
   res.json(serialize(row));
 });
 
 router.delete('/:id', (req, res) => {
-  const existing = db.prepare('SELECT * FROM feedings WHERE id = ? AND baby_id = ?').get(req.params.id, req.baby.id);
+  const existing = db.prepare('SELECT * FROM sleep_logs WHERE id = ? AND baby_id = ?').get(req.params.id, req.baby.id);
   if (!existing) {
-    return res.status(404).json({ error: 'Feeding not found' });
+    return res.status(404).json({ error: 'Sleep log not found' });
   }
-  db.prepare('DELETE FROM feedings WHERE id = ?').run(existing.id);
+  db.prepare('DELETE FROM sleep_logs WHERE id = ?').run(existing.id);
   res.status(204).send();
 });
 

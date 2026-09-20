@@ -1,12 +1,13 @@
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import React, { useCallback, useState } from 'react';
-import { ActivityIndicator, FlatList, RefreshControl, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Alert, FlatList, RefreshControl, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { api } from '../api/client';
 import { useAuth } from '../context/AuthContext';
+import { shareSummaryPdf } from '../export';
 import type { TimelineEntry } from '../api/types';
-import { DIAPER_ICONS, FEEDING_ICONS, PUMP_ICON } from '../icons';
+import { DIAPER_ICONS, FEEDING_ICONS, PUMP_ICON, SLEEP_ICONS } from '../icons';
 import { colors, font, radius, shadow, spacing } from '../theme';
 import { formatClockTime, formatRelativeTime } from '../utils/time';
 
@@ -17,33 +18,39 @@ const FEEDING_LABELS: Record<string, string> = {
   combo: 'Combo feed',
 };
 const DIAPER_LABELS: Record<string, string> = { wet: 'Wet diaper', dirty: 'Dirty diaper', dry: 'Dry diaper' };
+const SLEEP_LABELS: Record<string, string> = { nap: 'Nap', night: 'Night sleep' };
 
 function EntryRow({ entry, babyId }: { entry: TimelineEntry; babyId: string }) {
   const navigation = useNavigation<any>();
   const isFeeding = entry.kind === 'feeding';
   const isDiaper = entry.kind === 'diaper';
   const isPump = entry.kind === 'pump';
+  const isSleep = entry.kind === 'sleep';
 
   const label = isFeeding
     ? FEEDING_LABELS[entry.type as string]
     : isDiaper
       ? DIAPER_LABELS[entry.type as string]
-      : 'Pumped';
+      : isSleep
+        ? SLEEP_LABELS[entry.type as string]
+        : 'Pumped';
 
   const details = [
     isFeeding && entry.amountMl ? `${entry.amountMl} ml` : null,
-    (isFeeding || isPump) && entry.durationMin ? `${entry.durationMin} min` : null,
+    (isFeeding || isPump || isSleep) && entry.durationMin ? `${entry.durationMin} min` : null,
     isDiaper && entry.texture ? entry.texture : null,
     isDiaper && entry.color ? entry.color : null,
   ].filter(Boolean);
 
-  const badgeColor = isFeeding ? colors.feeding : isPump ? colors.pump : colors.diaper;
-  const badgeSoft = isFeeding ? colors.feedingSoft : isPump ? colors.pumpSoft : colors.diaperSoft;
+  const badgeColor = isFeeding ? colors.feeding : isPump ? colors.pump : isSleep ? colors.sleep : colors.diaper;
+  const badgeSoft = isFeeding ? colors.feedingSoft : isPump ? colors.pumpSoft : isSleep ? colors.sleepSoft : colors.diaperSoft;
   const iconName = isFeeding
     ? FEEDING_ICONS[entry.type as keyof typeof FEEDING_ICONS]
     : isPump
       ? PUMP_ICON
-      : DIAPER_ICONS[entry.type as keyof typeof DIAPER_ICONS];
+      : isSleep
+        ? SLEEP_ICONS[entry.type as keyof typeof SLEEP_ICONS]
+        : DIAPER_ICONS[entry.type as keyof typeof DIAPER_ICONS];
 
   const onPress = () => {
     if (isFeeding) {
@@ -67,6 +74,17 @@ function EntryRow({ entry, babyId }: { entry: TimelineEntry; babyId: string }) {
           texture: entry.texture ?? null,
           color: entry.color ?? null,
           loggedAt: entry.timestamp,
+          notes: entry.notes,
+        },
+      });
+    } else if (isSleep) {
+      navigation.navigate('AddSleep', {
+        babyId,
+        entry: {
+          id: entry.id,
+          type: entry.type,
+          startedAt: entry.timestamp,
+          durationMin: entry.durationMin ?? null,
           notes: entry.notes,
         },
       });
@@ -109,6 +127,7 @@ export default function TimelineScreen() {
   const [entries, setEntries] = useState<TimelineEntry[]>([]);
   const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+  const [sharing, setSharing] = useState(false);
 
   const load = useCallback(
     async (isRefresh = false) => {
@@ -126,6 +145,22 @@ export default function TimelineScreen() {
     },
     [token, selectedBabyId]
   );
+
+  const onShareSummary = async () => {
+    if (!token || !selectedBabyId) return;
+    const babyName = babies.find((b) => b.id === selectedBabyId)?.name ?? 'Baby';
+    setSharing(true);
+    try {
+      const data = await api.getTimeline(token, selectedBabyId, 500);
+      const sevenDaysAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
+      const recent = data.filter((e) => new Date(e.timestamp).getTime() >= sevenDaysAgo);
+      await shareSummaryPdf(babyName, recent, 'Last 7 days');
+    } catch {
+      Alert.alert('Could not create summary', 'Please try again.');
+    } finally {
+      setSharing(false);
+    }
+  };
 
   useFocusEffect(
     useCallback(() => {
@@ -156,7 +191,18 @@ export default function TimelineScreen() {
       contentContainerStyle={[styles.listContent, { paddingTop: insets.top + spacing.lg }]}
       data={entries}
       keyExtractor={(item) => `${item.kind}-${item.id}`}
-      ListHeaderComponent={<Text style={styles.screenTitle}>Timeline</Text>}
+      ListHeaderComponent={
+        <View style={styles.headerRow}>
+          <Text style={styles.screenTitle}>Timeline</Text>
+          <TouchableOpacity style={styles.shareButton} onPress={onShareSummary} disabled={sharing}>
+            {sharing ? (
+              <ActivityIndicator color={colors.feeding} size="small" />
+            ) : (
+              <Ionicons name="share-outline" size={20} color={colors.feeding} />
+            )}
+          </TouchableOpacity>
+        </View>
+      }
       renderItem={({ item }) => <EntryRow entry={item} babyId={selectedBabyId as string} />}
       refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => load(true)} />}
       ListEmptyComponent={
@@ -172,7 +218,16 @@ export default function TimelineScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.bg },
   listContent: { padding: spacing.xl, flexGrow: 1 },
-  screenTitle: { fontSize: font.size.xxl, fontWeight: font.weight.black, color: colors.textPrimary, marginBottom: spacing.lg },
+  headerRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: spacing.lg },
+  screenTitle: { fontSize: font.size.xxl, fontWeight: font.weight.black, color: colors.textPrimary },
+  shareButton: {
+    width: 40,
+    height: 40,
+    borderRadius: radius.md,
+    backgroundColor: colors.feedingSoft,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   row: {
     flexDirection: 'row',
     alignItems: 'center',

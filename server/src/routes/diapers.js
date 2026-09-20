@@ -103,4 +103,13 @@ router.patch('/:id', (req, res) => {
   res.json(serialize(row));
 });
 
+router.delete('/:id', (req, res) => {
+  const existing = db.prepare('SELECT * FROM diapers WHERE id = ? AND baby_id = ?').get(req.params.id, req.baby.id);
+  if (!existing) {
+    return res.status(404).json({ error: 'Diaper change not found' });
+  }
+  db.prepare('DELETE FROM diapers WHERE id = ?').run(existing.id);
+  res.status(204).send();
+});
+
 module.exports = router;

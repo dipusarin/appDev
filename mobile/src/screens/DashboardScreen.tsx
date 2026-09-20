@@ -15,7 +15,7 @@ import { api } from '../api/client';
 import IconTextInput from '../components/IconTextInput';
 import { useAuth } from '../context/AuthContext';
 import type { BabySummary } from '../api/types';
-import { DIAPER_ICONS, FEEDING_ICONS, PUMP_ICON } from '../icons';
+import { DIAPER_ICONS, FEEDING_ICONS, PUMP_ICON, SLEEP_ICONS } from '../icons';
 import { colors, font, getUrgencyColor, radius, shadow, spacing } from '../theme';
 import { formatClockTime, formatRelativeTime } from '../utils/time';
 
@@ -26,6 +26,7 @@ const FEEDING_LABELS: Record<string, string> = {
   combo: 'Combo feed',
 };
 const DIAPER_LABELS: Record<string, string> = { wet: 'Wet', dirty: 'Dirty', dry: 'Dry' };
+const SLEEP_LABELS: Record<string, string> = { nap: 'Nap', night: 'Night sleep' };
 
 function minutesSince(iso?: string | null): number | null {
   if (!iso) return null;
@@ -78,12 +79,12 @@ function StatusCard({
   iconSoft: string;
   label: string;
   lastIso: string | null;
-  urgencyKind: 'feeding' | 'pump' | 'diaper';
+  urgencyKind?: 'feeding' | 'pump' | 'diaper';
   meta: string;
   emptyText: string;
   onPress: () => void;
 }) {
-  const urgencyColor = getUrgencyColor(minutesSince(lastIso), urgencyKind);
+  const urgencyColor = urgencyKind ? getUrgencyColor(minutesSince(lastIso), urgencyKind) : colors.textPrimary;
   return (
     <TouchableOpacity style={styles.card} onPress={onPress} activeOpacity={0.85}>
       <View style={styles.cardTop}>
@@ -255,6 +256,33 @@ export default function DashboardScreen() {
             }
             emptyText="No diaper changes logged yet"
             onPress={() => navigation.navigate('AddDiaper', { babyId: selectedBabyId })}
+          />
+
+          <StatusCard
+            icon={
+              <MaterialCommunityIcons
+                name={summary?.lastSleep ? SLEEP_ICONS[summary.lastSleep.type] : 'sleep'}
+                size={22}
+                color={colors.sleep}
+              />
+            }
+            iconColor={colors.sleep}
+            iconSoft={colors.sleepSoft}
+            label="Sleep"
+            lastIso={summary?.lastSleep?.startedAt ?? null}
+            meta={
+              summary?.lastSleep
+                ? [
+                    SLEEP_LABELS[summary.lastSleep.type],
+                    summary.lastSleep.durationMin ? `${summary.lastSleep.durationMin} min` : null,
+                    `by ${summary.lastSleep.loggedByName}`,
+                  ]
+                    .filter(Boolean)
+                    .join(' · ')
+                : ''
+            }
+            emptyText="No sleep logged yet"
+            onPress={() => navigation.navigate('AddSleep', { babyId: selectedBabyId })}
           />
         </View>
       )}
