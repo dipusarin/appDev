@@ -19,7 +19,6 @@ import TimedField, { TimedValue } from '../components/TimedField';
 import { useAuth } from '../context/AuthContext';
 import type { Feeding, FeedingType } from '../api/types';
 import { FEEDING_ICONS } from '../icons';
-import { cancelReminder, scheduleReminder } from '../notifications';
 import { colors, font, radius, shadow, spacing } from '../theme';
 import { minutesAgoToIso } from '../utils/time';
 
@@ -41,8 +40,7 @@ export default function AddFeedingScreen() {
     entry?: Pick<Feeding, 'id' | 'type' | 'amountMl' | 'durationMin' | 'startedAt' | 'notes'>;
   };
   const isEditing = !!entry;
-  const { token, babies } = useAuth();
-  const babyName = babies.find((b) => b.id === babyId)?.name ?? 'Baby';
+  const { token } = useAuth();
 
   const [type, setType] = useState<FeedingType>(entry?.type ?? 'bottle');
   const [amountMl, setAmountMl] = useState(entry?.amountMl != null ? String(entry.amountMl) : '');
@@ -88,7 +86,6 @@ export default function AddFeedingScreen() {
       } else {
         await api.logFeeding(token, babyId, body);
       }
-      scheduleReminder('feeding', babyId, babyName, startedAt).catch(() => {});
       navigation.goBack();
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Could not save. Try again.');
@@ -100,7 +97,6 @@ export default function AddFeedingScreen() {
   const onDelete = async () => {
     if (!token || !entry) return;
     await api.deleteFeeding(token, babyId, entry.id);
-    cancelReminder('feeding', babyId).catch(() => {});
     navigation.goBack();
   };
 

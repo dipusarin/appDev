@@ -19,7 +19,6 @@ import TimeAgoPicker from '../components/TimeAgoPicker';
 import { useAuth } from '../context/AuthContext';
 import type { Diaper, DiaperColor, DiaperTexture, DiaperType } from '../api/types';
 import { DIAPER_ICONS } from '../icons';
-import { cancelReminder, scheduleReminder } from '../notifications';
 import { colors, font, radius, shadow, spacing } from '../theme';
 import { minutesAgoToIso } from '../utils/time';
 
@@ -64,8 +63,7 @@ export default function AddDiaperScreen() {
     entry?: Pick<Diaper, 'id' | 'type' | 'texture' | 'color' | 'loggedAt' | 'notes'>;
   };
   const isEditing = !!entry;
-  const { token, babies } = useAuth();
-  const babyName = babies.find((b) => b.id === babyId)?.name ?? 'Baby';
+  const { token } = useAuth();
 
   const [type, setType] = useState<DiaperType>(entry?.type ?? 'wet');
   const [texture, setTexture] = useState<DiaperTexture | null>(entry?.texture ?? null);
@@ -94,7 +92,6 @@ export default function AddDiaperScreen() {
       } else {
         await api.logDiaper(token, babyId, body);
       }
-      scheduleReminder('diaper', babyId, babyName, body.loggedAt).catch(() => {});
       navigation.goBack();
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Could not save. Try again.');
@@ -106,7 +103,6 @@ export default function AddDiaperScreen() {
   const onDelete = async () => {
     if (!token || !entry) return;
     await api.deleteDiaper(token, babyId, entry.id);
-    cancelReminder('diaper', babyId).catch(() => {});
     navigation.goBack();
   };
 

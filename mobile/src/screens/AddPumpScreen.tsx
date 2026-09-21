@@ -15,7 +15,6 @@ import DeleteEntryButton from '../components/DeleteEntryButton';
 import TimedField, { TimedValue } from '../components/TimedField';
 import { useAuth } from '../context/AuthContext';
 import type { Pump } from '../api/types';
-import { cancelReminder, scheduleReminder } from '../notifications';
 import { colors, font, radius, shadow, spacing } from '../theme';
 
 export default function AddPumpScreen() {
@@ -26,8 +25,7 @@ export default function AddPumpScreen() {
     entry?: Pick<Pump, 'id' | 'startedAt' | 'durationMin' | 'notes'>;
   };
   const isEditing = !!entry;
-  const { token, babies } = useAuth();
-  const babyName = babies.find((b) => b.id === babyId)?.name ?? 'Baby';
+  const { token } = useAuth();
 
   const [timed, setTimed] = useState<TimedValue>({
     startedAt: entry?.startedAt ?? new Date().toISOString(),
@@ -52,7 +50,6 @@ export default function AddPumpScreen() {
       } else {
         await api.logPump(token, babyId, body);
       }
-      scheduleReminder('pump', babyId, babyName, timed.startedAt).catch(() => {});
       navigation.goBack();
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Could not save. Try again.');
@@ -64,7 +61,6 @@ export default function AddPumpScreen() {
   const onDelete = async () => {
     if (!token || !entry) return;
     await api.deletePump(token, babyId, entry.id);
-    cancelReminder('pump', babyId).catch(() => {});
     navigation.goBack();
   };
 
