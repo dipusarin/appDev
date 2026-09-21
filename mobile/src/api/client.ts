@@ -1,4 +1,4 @@
-import { API_BASE_URL } from '../config';
+import { getApiBaseUrl } from '../config';
 import type {
   Baby,
   BabySummary,
@@ -33,7 +33,8 @@ interface RequestOptions {
 }
 
 async function request<T>(path: string, { method = 'GET', body, token }: RequestOptions = {}): Promise<T> {
-  const res = await fetch(`${API_BASE_URL}${path}`, {
+  const baseUrl = await getApiBaseUrl();
+  const res = await fetch(`${baseUrl}${path}`, {
     method,
     headers: {
       'Content-Type': 'application/json',

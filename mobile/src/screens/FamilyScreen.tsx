@@ -1,8 +1,9 @@
 import { Ionicons } from '@expo/vector-icons';
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, ScrollView, Share, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ApiError } from '../api/client';
+import { getApiBaseUrl, setApiBaseUrl } from '../config';
 import IconTextInput from '../components/IconTextInput';
 import { useAuth } from '../context/AuthContext';
 import { colors, font, radius, shadow, spacing } from '../theme';
@@ -24,6 +25,36 @@ export default function FamilyScreen() {
   const [inviteCodeInput, setInviteCodeInput] = useState('');
   const [joining, setJoining] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [serverUrlInput, setServerUrlInput] = useState('');
+  const [savingServer, setSavingServer] = useState(false);
+
+  useEffect(() => {
+    getApiBaseUrl().then(setServerUrlInput);
+  }, []);
+
+  const onSaveServerUrl = () => {
+    if (!serverUrlInput.trim()) return;
+    Alert.alert(
+      'Change server?',
+      "You'll be logged out and need to log in again against the new server.",
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Change & log out',
+          style: 'destructive',
+          onPress: async () => {
+            setSavingServer(true);
+            try {
+              await setApiBaseUrl(serverUrlInput);
+              await logout();
+            } finally {
+              setSavingServer(false);
+            }
+          },
+        },
+      ]
+    );
+  };
 
   const onShareInvite = () => {
     if (!family) return;
@@ -137,6 +168,28 @@ export default function FamilyScreen() {
         {error ? <Text style={styles.error}>{error}</Text> : null}
         <TouchableOpacity style={styles.secondaryButton} onPress={onJoinFamily} disabled={joining}>
           {joining ? <ActivityIndicator color={colors.feeding} /> : <Text style={styles.secondaryButtonText}>Join family</Text>}
+        </TouchableOpacity>
+      </View>
+
+      <View style={styles.card}>
+        <View style={styles.cardHeader}>
+          <Ionicons name="server-outline" size={16} color={colors.textSecondary} />
+          <Text style={styles.cardLabel}>Server (advanced)</Text>
+        </View>
+        <Text style={styles.cardMeta}>
+          The address of your backend. Only change this if you're self-hosting and the address has moved.
+        </Text>
+        <IconTextInput
+          icon="link-outline"
+          placeholder="http://100.x.x.x:4000/api"
+          autoCapitalize="none"
+          autoCorrect={false}
+          value={serverUrlInput}
+          onChangeText={setServerUrlInput}
+          style={styles.compactInput}
+        />
+        <TouchableOpacity style={styles.secondaryButton} onPress={onSaveServerUrl} disabled={savingServer}>
+          {savingServer ? <ActivityIndicator color={colors.feeding} /> : <Text style={styles.secondaryButtonText}>Save server address</Text>}
         </TouchableOpacity>
       </View>
 
